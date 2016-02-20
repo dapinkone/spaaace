@@ -87,8 +87,26 @@ all_sprites_list.add(enemy_group)
 # solution? no more mouse. still lags, but less game-breaking.
 pygame.mouse.set_visible(False)
 
-done = False
+def game_over():
+    screen.fill(black_color)  # clear screen.
+    game_over_text = Text("GAME OVER", 40, white_color).textSurf
+    game_over_x    = screen.get_width() / 2 - game_over_text.get_width() / 2
+    score_text     = Text("Score: {}".format(score), 30, white_color).textSurf
+    score_x        = screen.get_width() / 2 - score_text.get_width() / 2
+    screen.blit(game_over_text, (game_over_x, screen.get_height() / 3))
+    screen.blit(score_text, (score_x, screen.get_height() / 2))
 
+    pygame.display.flip()
+    done = False
+    while not done:
+        for event in pygame.event.get():
+            if event.type in (pygame.QUIT,
+                              pygame.K_ESCAPE,
+                              pygame.MOUSEBUTTONUP):
+                pygame.quit()  # perhaps I should add a "play again" button?
+                sys.exit()
+
+done = False
 while not done:  # main loop
     for event in pygame.event.get():
         if event.type in (pygame.QUIT, pygame.K_ESCAPE):
@@ -108,8 +126,10 @@ while not done:  # main loop
     # now checking for collision detection. not perfect, but enough for now.
     for sprite in pygame.sprite.spritecollide(player_sprite,
                                               enemy_group, True):
-        print("BOOM {} {}".format(score, sprite))
-        score = score + 1
+        game_over()
+        # TODO: insert code here for missle collisions w/ enemy_group
+        # print("BOOM {} {}".format(score, sprite))
+        # score = score + 1
 
     # clear the screen
     screen.fill(black_color)
@@ -126,6 +146,3 @@ while not done:  # main loop
 
     # slow it down, if necessary.
     fpsClock.tick(60)  # we don't need more than 60 fps for this. srsly.
-print("mainloop finished")
-pygame.quit()
-sys.exit()
