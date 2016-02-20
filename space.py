@@ -1,6 +1,6 @@
-#!python3
+#!/usr/bin/env python3
 """
-just getting started with pygame.
+just getting started with pygame. writing a simple space shooter.
 Dependancies notes removed -- see ./Dependancies
 
 TODO: randomly generate enemies
