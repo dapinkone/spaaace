@@ -1,5 +1,5 @@
 Dependancies installed to make this all run smoothly(sortof)
-# probably some others, like build-essential/utils which I took for granted.
+probably some others, like build-essential/utils which I took for granted.
 python3-dev python-dev libsdl-image1.2-dev libsdl-mixer1.2-dev
 libsdl-ttf2.0-dev libsdl1.2-dev libsmpeg-dev python3-numpy
 python-numpy subversion libportmidi-dev libfreetype6-dev
