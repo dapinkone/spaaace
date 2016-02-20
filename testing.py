@@ -5,15 +5,14 @@
 # python-numpy subversion libportmidi-dev libfreetype6-dev
 #
 # TODO:
-# enemies
-# weapons fire
-# colision
+# randomly generate enemies
+# weapons fire/collision thereof.
 # death/game over condition
+# animations or something upon death/explosion of a ship.
 # score displayed bottom left
 
-import pygame as pygame
-import sys
-import os.path
+import pygame, sys
+#import os.path
 # sys.path.append(os.path.dirname("__file__")) # add the program root dir to path.
 # from pygame.locals import * # sloppy. We can do better.
 
@@ -31,7 +30,6 @@ black_color = pygame.Color(0, 0, 0)
 
 # initialize variables
 mouse_x, mouse_y = 0, 0
-cursor_x, cursor_y = 0, 0
 score = 0
 
 # set_mode(width, height) making the window
@@ -53,10 +51,10 @@ class Enemy(Sprite):
     image = './assets/Enemy_ship.png'
 
     def update(self):
-        super(self).update()
         self.rect.y = self.rect.y + 1
         if self.rect.y > 600:
             self.rect.y = 20
+
 
 class Player(Sprite):
     def __init__(self, x, y):
@@ -64,50 +62,51 @@ class Player(Sprite):
     image = './assets/SpaceShip.png'
 
 all_sprites_list = pygame.sprite.Group()
-ship_sprite = Player(300, 500) # default player position.
-all_sprites_list.add(ship_sprite)
-enemy_ships_group = pygame.sprite.Group()
-for x in range(4):
+player_sprite = Player(300, 500) # default player position.
+all_sprites_list.add(player_sprite)
+enemy_group = pygame.sprite.Group()
+for x in range(8):
     print("enemy {}".format(x))
     enemy = Enemy(100*x, 0)
-    enemy_ships_group.add(enemy)
-    all_sprites_list.add(enemy)
+    enemy_group.add(enemy)
+all_sprites_list.add(enemy_group)
 
 # the mouse appears to lag a little bit, but cursor still gets action.
 # solution? no more mouse. still lags, but less game-breaking.
 pygame.mouse.set_visible(False)
 
-main_loop = True
-while main_loop:  # main loop
+done = False
+while not done:  # main loop
     for event in pygame.event.get():
         if event.type in (pygame.QUIT, pygame.K_ESCAPE):
-            main_loop = False
+            done = True
         elif event.type == pygame.MOUSEMOTION:
             x, y = pygame.mouse.get_pos()
-            ship_sprite.rect.x = x
-            ship_sprite.rect.y = y
+            # put center of ship on mouse, not corner of picture.
+            player_sprite.rect.x = x - 33
+            player_sprite.rect.y = y - 33
 
         elif event.type == pygame.MOUSEBUTTONUP:
             mouse_x, mouse_y = event.pos
             print("moused, quiting out.")
-            main_loop = False
+            done = True
             break
 
-    screen.fill(blue_color)  # clean screen
+    screen.fill(black_color)  # clean screen
 
     # paint our stuff to the screen.
     # screen.blit(ship_sprite.image, ship_sprite.rect)
     # pygame.draw.circle(screen, white_color, (cursor_x, cursor_y), 10, 10)
 
     # now checking for collision detection. not perfect, but enough for now.
-    for sprite in pygame.sprite.spritecollide(ship_sprite, \
-                                              enemy_ships_group, True):
+    for sprite in pygame.sprite.spritecollide(player_sprite, \
+                                              enemy_group, True):
         print("BOOM {} {}".format(score, sprite))
         score = score + 1
     all_sprites_list.draw(screen)
+    all_sprites_list.update()
     pygame.display.flip()  # reveal changes
-
-    fpsClock.tick(60)  # we don't need more than 60 fps for this. srsly.
+    print(fpsClock.tick(60))  # we don't need more than 60 fps for this. srsly.
 print("mainloop finished")
 pygame.quit()
 # sys.exit()
