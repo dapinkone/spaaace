@@ -1,12 +1,17 @@
-# just getting started with pygame.
-# Dependancies removed -- see ./Dependancies
-#
-# TODO:
-# randomly generate enemies
-# weapons fire/collision thereof.
-# death/game over condition
-# animations or something upon death/explosion of a ship.
-# score displayed bottom left
+#!python3
+"""
+just getting started with pygame.
+Dependancies notes removed -- see ./Dependancies
+
+TODO: randomly generate enemies
+TODO: variety of enemy ships
+TODO: item/powerup drops. Shield, weapon upgrade, diff ship, lives?
+TODO: weapons fire/collision thereof.
+TODO: animations or something upon death/explosion of a ship.
+TODO: extra lives, and display thereof
+DONE: score displayed
+DONE: death/game over condition
+"""
 
 import pygame
 import sys
@@ -119,7 +124,6 @@ while not done:  # main loop
 
         elif event.type == pygame.MOUSEBUTTONUP:
             mouse_x, mouse_y = event.pos
-            print("moused, quiting out.")
             done = True
             break
 
@@ -146,3 +150,4 @@ while not done:  # main loop
 
     # slow it down, if necessary.
     fpsClock.tick(60)  # we don't need more than 60 fps for this. srsly.
+game_over()
