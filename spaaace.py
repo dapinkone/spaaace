@@ -3,19 +3,24 @@
 just getting started with pygame. writing a simple space shooter.
 Dependancies notes removed -- see ./Dependancies
 
-TODO: randomly generate enemies
-TODO: variety of enemy ships
-TODO: item/powerup drops. Shield, weapon upgrade, diff ship, lives?
-TODO: add item drop: change of player ship
-TODO: animations/sounds upon explosion of ships and firing of weapons
+TODO: variety of enemy ships(diff ships=diff speeds/drops?)
+TODO: item/powerup drops: Shield, weapon upgrade, diff ship, lives?
+TODO: add item drop: change of player ship(req weapon reset?)
+TODO: animations upon collisions, firing of weapons
+TODO: sounds - weapon, ship-ship collision, weapon-ship collision
 TODO: extra lives, and display thereof
-TODO: scrolling background to give perception of movement
+TODO: scrolling background to give perception of movement(needed?)
 TODO: some sort of level progression(inc difficulty, change background)
 TODO: would keyboard-driven controls be more responsive? add them.
 TODO: perhaps make enemy moving more diverse than straight lines?
 TODO: implement enemy health pools?
 TODO: proper enemy size-specific placement
+TODO: boundaries to player ship: prevent moving off-screen to safety
+TODO: make collision system pixel perfect. *important*
+TODO: PAUSE feature
 
+DONE: randomly generate enemies
+DONE: rather than clearing screen on game_over, freezeframe?
 DONE: weapons fire/collision thereof.
 DONE: ships displayed/rendered
 DONE: score displayed
@@ -34,10 +39,10 @@ pygame.font.init()  # it caused issues.
 fpsClock = pygame.time.Clock()  # allow limiting FPS
 
 # define some color constants
-white_color = pygame.Color(255, 255, 255)  # standard (r, g, b)
-blue_color = pygame.Color(50, 50, 255)
-red_color = pygame.Color(255, 0, 0)
-black_color = pygame.Color(0, 0, 0)
+white = pygame.Color(255, 255, 255)  # standard (r, g, b)
+blue = pygame.Color(50, 50, 255)
+red = pygame.Color(255, 0, 0)
+black = pygame.Color(0, 0, 0)
 
 # initialize variables
 mouse_x, mouse_y = 0, 0
@@ -47,7 +52,7 @@ score = 0
 screen = pygame.display.set_mode((640, 640))
 screen_width  = screen.get_width()
 screen_height = screen.get_height()
-pygame.display.set_caption('hello pygame :D')
+pygame.display.set_caption('SPAAACE!')
 
 
 class S_Picture(pygame.sprite.Sprite):
@@ -57,6 +62,7 @@ class S_Picture(pygame.sprite.Sprite):
         self.image = pygame.image.load(image_filename).convert_alpha()
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = x, y
+        self.mask = pygame.mask.from_surface(self.image)
 
 class Bg_Picture(S_Picture):
     def __init__(self, image_filename):
@@ -110,9 +116,13 @@ class Player_bullet(S_Picture):
 
     def update(self):
         self.rect.y = self.rect.y - 5  # move toward enemies, away from player
+        if self.rect.y == 0:  # destroy sprite if it's out of range.
+            p_bullet_sprites.remove(self)
+            all_sprites_list.remove(self)
+
 
 class Text(pygame.sprite.Sprite):
-    def __init__(self, text, size=16, color=white_color, width=40, height=40):
+    def __init__(self, text, size=16, color=white, width=40, height=40):
         pygame.sprite.Sprite.__init__(self)
 
         self.font = pygame.font.SysFont("Arial", size)
@@ -128,7 +138,7 @@ p_bullet_sprites = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 def get_rand_x():  # randomized location for new ships.
     # TODO: this needs to take int account width of the ship,
-    return(random.randrange(0, screen_width - 50))
+    return(random.randrange(0, screen_width - 60))
 
 # need this so we can relocate/shuffle when they hit bottom of board.
 
@@ -145,11 +155,10 @@ lvl_one_bg = Bg_Picture('./assets/level one.png')
 # solution? no more mouse. still lags, but less game-breaking.
 pygame.mouse.set_visible(False)
 
-def game_over():
-    screen.fill(black_color)  # clear screen.
-    game_over_text = Text("GAME OVER", 40, white_color).textSurf
+def game_over():  # game over screen/menu?
+    game_over_text = Text("GAME OVER", 40, white).textSurf
     game_over_x    = screen.get_width() / 2 - game_over_text.get_width() / 2
-    score_text     = Text("Score: {}".format(score), 30, white_color).textSurf
+    score_text     = Text("Score: {}".format(score), 30, white).textSurf
     score_x        = screen.get_width() / 2 - score_text.get_width() / 2
     screen.blit(game_over_text, (game_over_x, screen.get_height() / 3))
     screen.blit(score_text, (score_x, screen.get_height() / 2))
@@ -202,14 +211,13 @@ while not done:  # main loop
     # TODO: further complicate with level formula/speeds?
     if len(enemy_group) < 5:
         spawn_enemies(5)
-    # clear the screen
-    screen.fill(black_color)
 
     # update all the things!
     all_sprites_list.update()
 
-    # draw all the things!
+    # paint bg, clear the field.
     pygame.sprite.Group(lvl_one_bg).draw(screen)
+    # draw all the things!
     all_sprites_list.draw(screen)
     screen.blit(Text("Score: {}".format(score)).textSurf, (20, 5))
     FPS_text = Text("FPS: {:.4}".format(fpsClock.get_fps())).textSurf
