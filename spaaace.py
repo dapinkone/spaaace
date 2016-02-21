@@ -16,9 +16,9 @@ TODO: perhaps make enemy moving more diverse than straight lines?
 TODO: implement enemy health pools?
 TODO: proper enemy size-specific placement
 TODO: boundaries to player ship: prevent moving off-screen to safety
-TODO: make collision system pixel perfect. *important*
 TODO: PAUSE feature
 
+DONE: make collision system pixel perfect.
 DONE: randomly generate enemies
 DONE: rather than clearing screen on game_over, freezeframe?
 DONE: weapons fire/collision thereof.
@@ -206,21 +206,18 @@ while not done:  # main loop
             all_sprites_list.add(new_bullet)
             # TODO: add bullet sound
 
-    # now checking for collision player vs enemy ships.
-    # for sprite in pygame.sprite.spritecollide(player_sprite,
-    #                                           enemy_group, True):
-    #     game_over()
-
-    # pixel perfect collision?
+    # pixel perfect collision.
     for sprite in enemy_group:
         if(pixel_collision(sprite, player_sprite)):
-            # print(sprite, sprite.rect
             game_over()
     # collision enemy vs player bullets
-    for sprite in pygame.sprite.groupcollide(enemy_group,
-                                             p_bullet_sprites, True, True):
-        # we got one!
-        score = score + 1
+    for bullet in p_bullet_sprites:
+        for enemy in enemy_group:
+            if(pixel_collision(bullet, enemy)):
+                score = score + 1
+                enemy_group.remove(enemy)
+                p_bullet_sprites.remove(bullet)
+                all_sprites_list.remove(bullet, enemy)
         # TODO: add sound/animation?
         # TODO: spawn loot drops here at position of collision.
 
