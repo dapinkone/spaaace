@@ -13,10 +13,11 @@ TODO: some sort of level progression(inc difficulty, change background)
 TODO: would keyboard-driven controls be more responsive? add them.
 TODO: perhaps make enemy moving more diverse than straight lines?
 TODO: implement enemy health pools?
-TODO: proper enemy size-specific placement
 TODO: boundaries to player ship: prevent moving off-screen to safety
 TODO: PAUSE feature
+TODO: game_over() continue button.
 
+DONE: proper enemy size-specific placement # accidentally via collision.
 DONE: make collision system pixel perfect.
 DONE: randomly generate enemies
 DONE: rather than clearing screen on game_over, freezeframe?
@@ -42,24 +43,16 @@ test_sound = pygame.mixer.Sound(test_sound_file)
 
 fpsClock = pygame.time.Clock()  # allow limiting FPS
 
-# define some color constants
+# DEFINE CONSTANTS
 white = pygame.Color(255, 255, 255)  # standard (r, g, b)
-blue = pygame.Color(50, 50, 255)
-red = pygame.Color(255, 0, 0)
+blue  = pygame.Color(50, 50, 255)
+red   = pygame.Color(255, 0, 0)
 black = pygame.Color(0, 0, 0)
+green = pygame.Color(0, 255, 0)
 
-# initialize variables
-mouse_x, mouse_y = 0, 0
-score = 0
-timer = 0  # tracking how long we've been in-game.
-
-# set_mode(width, height) making the window
-screen = pygame.display.set_mode((640, 640))
-screen_width  = screen.get_width()
-screen_height = screen.get_height()
-pygame.display.set_caption('SPAAACE!')
-
-
+#########################################
+# CLASSES
+#########################################
 class S_Picture(pygame.sprite.Sprite):
 
     def __init__(self, image_filename, x, y):
@@ -133,24 +126,30 @@ class Text(pygame.sprite.Sprite):
 
         self.font = pygame.font.SysFont("Arial", size)
         self.textSurf = self.font.render(text, 1, color)
+###################################
+# initialize variables
+##################################
+mouse_x, mouse_y = 0, 0
+score = 0
+timer = 0  # tracking how long we've been in-game.
 
+# set_mode(width, height) making the window
+screen = pygame.display.set_mode((640, 640))
+screen_width  = screen.get_width()
+screen_height = screen.get_height()
+pygame.display.set_caption('SPAAACE bubbles!')
 
-player_sprite = Player(300, 500)  # default player ship pos/sprite
-
-all_sprites_list = pygame.sprite.Group(player_sprite)
+all_sprites_list = pygame.sprite.Group()
 p_bullet_sprites = pygame.sprite.Group()
+enemy_group      = pygame.sprite.Group()
 
-# generate some enemies
-enemy_group = pygame.sprite.Group()
+lvl_one_bg = Bg_Picture('./assets/level one.png')
+
 def get_rand_x():  # randomized location for new ships.
-    # TODO: this needs to take int account width of the ship,
+    # TODO: this may be more efficient taking into account width of the ship
     return(random.randrange(0, screen_width - 60))
 
-# need this so we can relocate/shuffle when they hit bottom of board.
-
-# detect pixel-perfect collision, see:
-# https://sivasantosh.wordpress.com/2012/07/23/using-masks-pygame/ for sauce.
-def pixel_collision(sprite_a, sprite_b):
+def pixel_collision(sprite_a, sprite_b):  # pixel perfect collision
     rect_a = sprite_a.rect
     rect_b = sprite_b.rect
     offset_x, offset_y = (rect_b.left - rect_a.left), (rect_b.top - rect_a.top)
@@ -163,88 +162,118 @@ def spawn_enemies(quantity):
     for x in range(quantity):
         print("enemy {}".format(x))
         print(Enemy(0, screen_height / 2, (random.randint(-1, 1), 1)))
-spawn_enemies(10)
-
-# background image sprites!
-lvl_one_bg = Bg_Picture('./assets/level one.png')
-
-# the mouse appears to lag a little bit, but cursor still gets action.
-# solution? no more mouse. still lags, but less game-breaking.
-pygame.mouse.set_visible(False)
 
 def game_over():  # game over screen/menu?
+    pygame.mouse.set_visible(True)
+    global score
     game_over_text = Text("GAME OVER", 40, white).textSurf
-    game_over_x    = screen.get_width() / 2 - game_over_text.get_width() / 2
+    game_over_x    = screen_width / 2 - game_over_text.get_width() / 2
     score_text     = Text("Score: {}".format(score), 30, white).textSurf
-    score_x        = screen.get_width() / 2 - score_text.get_width() / 2
-    screen.blit(game_over_text, (game_over_x, screen.get_height() / 3))
-    screen.blit(score_text, (score_x, screen.get_height() / 2))
-
+    score_text_x   = screen_width / 2 - score_text.get_width() / 2
+    again_text     = Text("Press Space", 30, green).textSurf
+    again_text_x   = screen_width / 2 - again_text.get_width() / 2
+    screen.blit(game_over_text, (game_over_x, screen_height / 3))
+    screen.blit(score_text, (score_text_x, screen_height / 2))
+    screen.blit(again_text, (again_text_x, screen_height / 1.5))
     pygame.display.flip()
     done = False
     while not done:
+        mouse_x, mouse_y = pygame.mouse.get_pos()
         for event in pygame.event.get():
-            if event.type in (pygame.QUIT,
-                              pygame.K_ESCAPE,
-                              pygame.MOUSEBUTTONUP):
+            if event.type == pygame.QUIT:
                 pygame.quit()  # perhaps I should add a "play again" button?
                 sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    reset_game()
+                if event.key in (pygame.K_ESCAPE):
+                    pygame.quit()
+                    sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                pass  # TODO add continue button.
+                #print(again_text.get_rect())
+                #print(mouse_y, mouse_x)
+            # else:
+            #    print(event, event.type)
+            #    main()
+        fpsClock.tick(60)
 
-done = False
-while not done:  # main loop
-    for event in pygame.event.get():
-        if event.type in (pygame.QUIT, pygame.K_ESCAPE):
-            done = True
+def reset_game():
+    global score
+    score = 0
+    for s in all_sprites_list:
+        all_sprites_list.remove(s)
+    for s in p_bullet_sprites:
+        p_bullet_sprites.remove(s)
+    for s in enemy_group:
+        enemy_group.remove(s)
+    main()
 
-        # TODO: add keyboard controls here.
-        # mouse controls
-        elif event.type == pygame.MOUSEMOTION:
-            x, y = pygame.mouse.get_pos()
-            # put center of ship on mouse, not corner of picture.
-            player_sprite.rect.x = x - 33
-            player_sprite.rect.y = y - 33
+player_sprite = Player(300, 500)
+all_sprites_list = pygame.sprite.Group()
+p_bullet_sprites = pygame.sprite.Group()
+enemy_group      = pygame.sprite.Group()
+spawn_enemies(10)
 
-        elif event.type == pygame.MOUSEBUTTONUP:
-            mouse_x, mouse_y = event.pos
-            new_bullet = Player_bullet(mouse_x, mouse_y - 20)
-            p_bullet_sprites.add(new_bullet)
-            all_sprites_list.add(new_bullet)
-            # TODO: add bullet sound
+def main():
+    pygame.mouse.set_visible(False)
+    all_sprites_list.add(player_sprite)
+    done = False
+    while not done:  # main loop
+        for event in pygame.event.get():
+            if event.type in (pygame.QUIT, pygame.K_ESCAPE):
+                done = True
 
-    # pixel perfect collision player v enemy
-    for sprite in enemy_group:
-        if(pixel_collision(sprite, player_sprite)):
-            game_over()
-    # collision enemy vs bullets
-    for bullet in p_bullet_sprites:
-        for enemy in enemy_group:
-            if(pixel_collision(bullet, enemy)):
-                score = score + 1
-                enemy_group.remove(enemy)
-                p_bullet_sprites.remove(bullet)
-                all_sprites_list.remove(bullet, enemy)
-                test_sound.play()
-        # TODO: add sound/animation?
-        # TODO: spawn loot drops here at position of collision.
+            # TODO: add keyboard controls here.
+            # mouse controls
+            elif event.type == pygame.MOUSEMOTION:
+                x, y = pygame.mouse.get_pos()
+                # put center of ship on mouse, not corner of picture.
+                player_sprite.rect.x = x - 33
+                player_sprite.rect.y = y - 33
 
-    # if enemies have been destroyed, lets spawn some new ones.
-    # TODO: further complicate with level formula/speeds?
-    timer = pygame.time.get_ticks() / 10000
-    if len(enemy_group) < timer:
-        spawn_enemies(2)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                mouse_x, mouse_y = event.pos
+                new_bullet = Player_bullet(mouse_x, mouse_y - 20)
+                p_bullet_sprites.add(new_bullet)
+                all_sprites_list.add(new_bullet)
+                # TODO: add bullet sound
 
-    # update all the things!
-    all_sprites_list.update()
+        # pixel perfect collision player v enemy
+        for sprite in enemy_group:
+            if(pixel_collision(sprite, player_sprite)):
+                game_over()
+        # collision enemy vs bullets
+        for bullet in p_bullet_sprites:
+            for enemy in enemy_group:
+                if(pixel_collision(bullet, enemy)):
+                    global score
+                    score = score + 1
+                    enemy_group.remove(enemy)
+                    p_bullet_sprites.remove(bullet)
+                    all_sprites_list.remove(bullet, enemy)
+                    test_sound.play()
+            # TODO: add sound/animation?
+            # TODO: spawn loot drops here at position of collision.
 
-    # paint bg, clear the field.
-    pygame.sprite.Group(lvl_one_bg).draw(screen)
-    # draw all the things!
-    all_sprites_list.draw(screen)
-    screen.blit(Text("Score: {}".format(score)).textSurf, (20, 5))
-    FPS_text = Text("FPS: {:.4}".format(fpsClock.get_fps())).textSurf
-    screen.blit(FPS_text, (screen_width - FPS_text.get_width() - 20, 5))
-    pygame.display.flip()  # reveal changes
+        # if enemies have been destroyed, lets spawn some new ones.
+        # TODO: further complicate with level formula/speeds?
+        timer = pygame.time.get_ticks() / 10000
+        if len(enemy_group) < timer:
+            spawn_enemies(2)
 
-    # slow it down, if necessary.
-    fpsClock.tick(60)  # we don't need more than 60 fps for this. srsly.
-game_over()
+        # update all the things!
+        all_sprites_list.update()
+
+        # paint bg, clear the field.
+        pygame.sprite.Group(lvl_one_bg).draw(screen)
+        # draw all the things!
+        all_sprites_list.draw(screen)
+        screen.blit(Text("Score: {}".format(score)).textSurf, (20, 5))
+        FPS_text = Text("FPS: {:.4}".format(fpsClock.get_fps())).textSurf
+        screen.blit(FPS_text, (screen_width - FPS_text.get_width() - 20, 5))
+        pygame.display.flip()  # reveal changes
+
+        # slow it down, if necessary.
+        fpsClock.tick(60)  # we don't need more than 60 fps for this. srsly.
+main()
