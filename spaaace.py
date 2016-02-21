@@ -71,7 +71,7 @@ class Bg_Picture(S_Picture):
 
     def update(self):
         # self.rect.y = self.rect.y + 5  # move consistently towards player
-        # background level_one = 1782 height for a game-wide standard.
+        # background level_one = 1782 height for a game-wide standard?
         # if self.rect.y > screen_height:
         #    self.rect.y = 0
         pass
@@ -149,7 +149,6 @@ def pixel_collision(sprite_a, sprite_b):
     rect_b = sprite_b.rect
     offset_x, offset_y = (rect_b.left - rect_a.left), (rect_b.top - rect_a.top)
     if(sprite_a.mask.overlap(sprite_b.mask, (offset_x, offset_y)) is not None):
-        # print("collision detected{} {}".format(sprite_a.image_filename, sprite_b.image_filename))
         return True
     else:
         False
