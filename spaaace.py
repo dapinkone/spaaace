@@ -9,7 +9,6 @@ TODO: add item drop: change of player ship(req weapon reset?)
 TODO: animations upon collisions, firing of weapons
 TODO: sounds - weapon, ship-ship collision, weapon-ship collision
 TODO: extra lives, and display thereof
-TODO: scrolling background to give perception of movement(needed?)
 TODO: some sort of level progression(inc difficulty, change background)
 TODO: would keyboard-driven controls be more responsive? add them.
 TODO: perhaps make enemy moving more diverse than straight lines?
@@ -34,7 +33,8 @@ import random
 # pygame.init mysteriously crashes on debian when pygame.quit is called.
 # lets use pygame.display instead, and hope that doesn't cause issues.
 pygame.display.init()
-pygame.font.init()  # it caused issues.
+pygame.font.init()   # it caused issues. required for text.
+pygame.mixer.init()  # for sound
 
 fpsClock = pygame.time.Clock()  # allow limiting FPS
 
@@ -64,6 +64,57 @@ class S_Picture(pygame.sprite.Sprite):
         self.rect.x, self.rect.y = x, y
         self.mask = pygame.mask.from_surface(self.image)
 
+class Player(S_Picture):
+    def __init__(self, x, y):
+        S_Picture.__init__(self, self.image_filename, x, y)
+    image_filename = './assets/SpaceShip.png'
+
+class Player_bullet(S_Picture):
+    # x, y for current location.
+    # v_x, v_y for vector/speed/movement calculations.
+    def __init__(self, x, y, vector = (0, -5)):
+        S_Picture.__init__(self, self.image_filename, x, y)
+        self.v_x, self.v_y = vector
+    image_filename = './assets/player_bullet.png'
+
+    def update(self):
+        self.rect.y = self.rect.y + self.v_y
+        self.rect.x = self.rect.x + self.v_x
+        if self.rect.y == 0:  # destroy sprite if it's out of range.
+            p_bullet_sprites.remove(self)
+            all_sprites_list.remove(self)
+
+class Enemy(S_Picture):
+    def __init__(self, x = 0, y = 0, vector = (0, 1)):
+        S_Picture.__init__(self, self.image_filename, x, y)
+        self.v_x, self.v_y = vector
+        self.relocate()  # find a good initial position.
+        enemy_group.add(self)
+        all_sprites_list.add(self)
+    image_filename = './assets/Enemy_ship.png'
+
+    def update(self):
+        self.rect.y = self.rect.y + self.v_y
+        self.rect.x = self.rect.x + self.v_x
+        if self.rect.y > 600:
+            self.rect.y = 0
+            self.relocate()
+        if self.rect.x > screen_height:
+            self.rect.x = 0
+
+    def relocate(self):
+            attempts = 0
+            # keep trying to find a free spot. give it a few tries.
+            enemy_group.remove(self)  # if it already exists = inf collision
+            self.rect.x = get_rand_x()
+            self.rect.y = 0
+            while(pygame.sprite.spritecollide(self, enemy_group, False)):
+                attempts = attempts + 1
+                if attempts > 10:  # prevent infinite looping here.
+                    self.rect.y = self.rect.y - 20
+                    # print("too many tries, moving up in y")
+            enemy_group.add(self)
+
 class Bg_Picture(S_Picture):
     def __init__(self, image_filename):
         self.image_filename = image_filename
@@ -75,51 +126,6 @@ class Bg_Picture(S_Picture):
         # if self.rect.y > screen_height:
         #    self.rect.y = 0
         pass
-
-
-class Enemy(S_Picture):
-    def __init__(self, x = 0, y = 0):
-        S_Picture.__init__(self, self.image_filename, x, y)
-        self.relocate()  # find a good initial position.
-        enemy_group.add(self)
-        all_sprites_list.add(self)
-    image_filename = './assets/Enemy_ship.png'
-
-    def update(self):
-        self.rect.y = self.rect.y + 1
-        if self.rect.y > 600:
-            self.rect.y = 0
-            self.relocate()
-
-    def relocate(self):
-            attempts = 0
-            # keep trying to find a free spot. give it a few tries.
-            enemy_group.remove(self)  # if it already exists = inf collision
-            self.rect.x = get_rand_x()
-            while(pygame.sprite.spritecollide(self, enemy_group, False)):
-                attempts = attempts + 1
-                if attempts > 10:  # prevent infinite looping here.
-                    self.rect.y = self.rect.y - 20
-                    print("too many tries, moving up in y")
-            enemy_group.add(self)
-
-class Player(S_Picture):
-    def __init__(self, x, y):
-        S_Picture.__init__(self, self.image_filename, x, y)
-    image_filename = './assets/SpaceShip.png'
-
-
-class Player_bullet(S_Picture):
-    def __init__(self, x, y):
-        S_Picture.__init__(self, self.image_filename, x, y)
-    image_filename = './assets/player_bullet.png'
-
-    def update(self):
-        self.rect.y = self.rect.y - 5  # move toward enemies, away from player
-        if self.rect.y == 0:  # destroy sprite if it's out of range.
-            p_bullet_sprites.remove(self)
-            all_sprites_list.remove(self)
-
 
 class Text(pygame.sprite.Sprite):
     def __init__(self, text, size=16, color=white, width=40, height=40):
@@ -151,7 +157,7 @@ def pixel_collision(sprite_a, sprite_b):
     if(sprite_a.mask.overlap(sprite_b.mask, (offset_x, offset_y)) is not None):
         return True
     else:
-        False
+        return False
 
 def spawn_enemies(quantity):
     for x in range(quantity):
@@ -205,11 +211,11 @@ while not done:  # main loop
             all_sprites_list.add(new_bullet)
             # TODO: add bullet sound
 
-    # pixel perfect collision.
+    # pixel perfect collision player v enemy
     for sprite in enemy_group:
         if(pixel_collision(sprite, player_sprite)):
             game_over()
-    # collision enemy vs player bullets
+    # collision enemy vs bullets
     for bullet in p_bullet_sprites:
         for enemy in enemy_group:
             if(pixel_collision(bullet, enemy)):
@@ -222,7 +228,7 @@ while not done:  # main loop
 
     # if enemies have been destroyed, lets spawn some new ones.
     # TODO: further complicate with level formula/speeds?
-    if len(enemy_group) < 5:
+    if len(enemy_group) < int(score / 5):
         spawn_enemies(5)
 
     # update all the things!
