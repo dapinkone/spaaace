@@ -47,6 +47,7 @@ black = pygame.Color(0, 0, 0)
 # initialize variables
 mouse_x, mouse_y = 0, 0
 score = 0
+timer = 0  # tracking how long we've been in-game.
 
 # set_mode(width, height) making the window
 screen = pygame.display.set_mode((640, 640))
@@ -99,8 +100,10 @@ class Enemy(S_Picture):
         if self.rect.y > 600:
             self.rect.y = 0
             self.relocate()
-        if self.rect.x > screen_height:
+        if self.rect.x > screen_width:
             self.rect.x = 0
+        if self.rect.x < 0:
+            self.rect.x = screen_width
 
     def relocate(self):
             attempts = 0
@@ -119,13 +122,6 @@ class Bg_Picture(S_Picture):
     def __init__(self, image_filename):
         self.image_filename = image_filename
         S_Picture.__init__(self, self.image_filename, 0, -1782 + screen_height)
-
-    def update(self):
-        # self.rect.y = self.rect.y + 5  # move consistently towards player
-        # background level_one = 1782 height for a game-wide standard?
-        # if self.rect.y > screen_height:
-        #    self.rect.y = 0
-        pass
 
 class Text(pygame.sprite.Sprite):
     def __init__(self, text, size=16, color=white, width=40, height=40):
@@ -162,7 +158,7 @@ def pixel_collision(sprite_a, sprite_b):
 def spawn_enemies(quantity):
     for x in range(quantity):
         print("enemy {}".format(x))
-        print(Enemy())  # [ Enemy() for x in range(10) ] ?
+        print(Enemy(0, screen_height / 2, (random.randint(-1, 1), 1)))
 spawn_enemies(10)
 
 # background image sprites!
@@ -228,8 +224,9 @@ while not done:  # main loop
 
     # if enemies have been destroyed, lets spawn some new ones.
     # TODO: further complicate with level formula/speeds?
-    if len(enemy_group) < int(score / 5):
-        spawn_enemies(5)
+    timer = pygame.time.get_ticks() / 10000
+    if len(enemy_group) < timer:
+        spawn_enemies(2)
 
     # update all the things!
     all_sprites_list.update()
