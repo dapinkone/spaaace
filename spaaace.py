@@ -6,9 +6,14 @@ Dependancies notes removed -- see ./Dependancies
 TODO: randomly generate enemies
 TODO: variety of enemy ships
 TODO: item/powerup drops. Shield, weapon upgrade, diff ship, lives?
-TODO: weapons fire/collision thereof.
-TODO: animations or something upon death/explosion of a ship.
+TODO: animations/sounds upon explosion of ships and firing of weapons
 TODO: extra lives, and display thereof
+TODO: scrolling background to give perception of movement
+TODO: some sort of level progression(inc difficulty, change background)
+TODO: would keyboard-driven controls be more responsive? add them.
+
+DONE: weapons fire/collision thereof.
+DONE: ships displayed/rendered
 DONE: score displayed
 DONE: death/game over condition
 """
@@ -16,8 +21,6 @@ DONE: death/game over condition
 import pygame
 import sys
 import random
-# import os.path
-# from pygame.locals import * # sloppy. We can do better.
 
 # pygame.init mysteriously crashes on debian when pygame.quit is called.
 # lets use pygame.display instead, and hope that doesn't cause issues.
@@ -29,7 +32,7 @@ fpsClock = pygame.time.Clock()  # allow limiting FPS
 # define some color constants
 white_color = pygame.Color(255, 255, 255)  # standard (r, g, b)
 blue_color = pygame.Color(50, 50, 255)
-red_color = pygame.Color(255, 50, 50)
+red_color = pygame.Color(255, 0, 0)
 black_color = pygame.Color(0, 0, 0)
 
 # initialize variables
@@ -68,6 +71,15 @@ class Player(S_Picture):
         S_Picture.__init__(self, self.image, x, y)
     image = './assets/SpaceShip.png'
 
+
+class Player_bullet(S_Picture):
+    def __init__(self, x, y):
+        S_Picture.__init__(self, self.image, x, y)
+    image = './assets/player_bullet.png'
+
+    def update(self):
+        self.rect.y = self.rect.y - 5  # move toward enemies, away from player
+
 class Text(pygame.sprite.Sprite):
     def __init__(self, text, size=16, color=white_color, width=40, height=40):
         pygame.sprite.Sprite.__init__(self)
@@ -75,10 +87,11 @@ class Text(pygame.sprite.Sprite):
         self.font = pygame.font.SysFont("Arial", size)
         self.textSurf = self.font.render(text, 1, color)
 
+
 player_sprite = Player(300, 500)  # default player ship pos/sprite
 
 all_sprites_list = pygame.sprite.Group(player_sprite)
-
+p_bullet_sprites = pygame.sprite.Group()
 # generate some enemies
 enemy_group = pygame.sprite.Group()
 for x in range(8):
@@ -116,6 +129,9 @@ while not done:  # main loop
     for event in pygame.event.get():
         if event.type in (pygame.QUIT, pygame.K_ESCAPE):
             done = True
+
+        # TODO: add keyboard controls here.
+        # mouse controls
         elif event.type == pygame.MOUSEMOTION:
             x, y = pygame.mouse.get_pos()
             # put center of ship on mouse, not corner of picture.
@@ -124,16 +140,23 @@ while not done:  # main loop
 
         elif event.type == pygame.MOUSEBUTTONUP:
             mouse_x, mouse_y = event.pos
-            done = True
-            break
+            new_bullet = Player_bullet(mouse_x, mouse_y - 20)
+            p_bullet_sprites.add(new_bullet)
+            all_sprites_list.add(new_bullet)
+            # TODO: add bullet sound
 
-    # now checking for collision detection. not perfect, but enough for now.
+    # now checking for collision player vs enemy ships.
     for sprite in pygame.sprite.spritecollide(player_sprite,
                                               enemy_group, True):
         game_over()
-        # TODO: insert code here for missle collisions w/ enemy_group
-        # print("BOOM {} {}".format(score, sprite))
-        # score = score + 1
+
+    # collision enemy vs player bullets
+    for sprite in pygame.sprite.groupcollide(enemy_group,
+                                             p_bullet_sprites, True, True):
+        # we got one!
+        score = score + 1
+        # TODO: add sound/animation?
+        # TODO: spawn loot drops here at position of collision.
 
     # clear the screen
     screen.fill(black_color)
