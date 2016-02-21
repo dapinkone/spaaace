@@ -6,11 +6,15 @@ Dependancies notes removed -- see ./Dependancies
 TODO: randomly generate enemies
 TODO: variety of enemy ships
 TODO: item/powerup drops. Shield, weapon upgrade, diff ship, lives?
+TODO: add item drop: change of player ship
 TODO: animations/sounds upon explosion of ships and firing of weapons
 TODO: extra lives, and display thereof
 TODO: scrolling background to give perception of movement
 TODO: some sort of level progression(inc difficulty, change background)
 TODO: would keyboard-driven controls be more responsive? add them.
+TODO: perhaps make enemy moving more diverse than straight lines?
+TODO: implement enemy health pools?
+TODO: proper enemy size-specific placement
 
 DONE: weapons fire/collision thereof.
 DONE: ships displayed/rendered
@@ -43,7 +47,6 @@ score = 0
 screen = pygame.display.set_mode((640, 640))
 screen_width  = screen.get_width()
 screen_height = screen.get_height()
-
 pygame.display.set_caption('hello pygame :D')
 
 
@@ -55,27 +58,54 @@ class S_Picture(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = x, y
 
+class Bg_Picture(S_Picture):
+    def __init__(self, image_filename):
+        self.image_filename = image_filename
+        S_Picture.__init__(self, self.image_filename, 0, -1782 + screen_height)
+
+    def update(self):
+        self.rect.y = self.rect.y + 5  # move consistently towards player
+        # background level_one = 1782 height for a game-wide standard.
+        if self.rect.y > screen_height:
+            self.rect.y = 0
+
+
 class Enemy(S_Picture):
-    def __init__(self, x, y):
-        S_Picture.__init__(self, self.image, x, y)
-    image = './assets/Enemy_ship.png'
+    def __init__(self, x = 0, y = 0):
+        S_Picture.__init__(self, self.image_filename, x, y)
+        self.relocate()  # find a good initial position.
+        enemy_group.add(self)
+        all_sprites_list.add(self)
+    image_filename = './assets/Enemy_ship.png'
 
     def update(self):
         self.rect.y = self.rect.y + 1
         if self.rect.y > 600:
-            self.rect.y = 20
+            self.rect.y = 0
+            self.relocate()
 
+    def relocate(self):
+            attempts = 0
+            # keep trying to find a free spot. give it a few tries.
+            enemy_group.remove(self)  # if it already exists = inf collision
+            self.rect.x = get_rand_x()
+            while(pygame.sprite.spritecollide(self, enemy_group, False)):
+                attempts = attempts + 1
+                if attempts > 10:  # prevent infinite looping here.
+                    self.rect.y = self.rect.y + 20
+                    print("too many tries, moving up in y")
+            enemy_group.add(self)
 
 class Player(S_Picture):
     def __init__(self, x, y):
-        S_Picture.__init__(self, self.image, x, y)
-    image = './assets/SpaceShip.png'
+        S_Picture.__init__(self, self.image_filename, x, y)
+    image_filename = './assets/SpaceShip.png'
 
 
 class Player_bullet(S_Picture):
     def __init__(self, x, y):
-        S_Picture.__init__(self, self.image, x, y)
-    image = './assets/player_bullet.png'
+        S_Picture.__init__(self, self.image_filename, x, y)
+    image_filename = './assets/player_bullet.png'
 
     def update(self):
         self.rect.y = self.rect.y - 5  # move toward enemies, away from player
@@ -92,14 +122,32 @@ player_sprite = Player(300, 500)  # default player ship pos/sprite
 
 all_sprites_list = pygame.sprite.Group(player_sprite)
 p_bullet_sprites = pygame.sprite.Group()
+
 # generate some enemies
 enemy_group = pygame.sprite.Group()
-for x in range(8):
-    print("enemy {}".format(x))
-    enemy = Enemy(100 * x, 0)
-    enemy_group.add(enemy)
-all_sprites_list.add(enemy_group)
+def get_rand_x():  # randomized location for new ships.
+    # TODO: this needs to take int account width of the ship,
+    return(random.randrange(0, screen_width - 50))
 
+# need this so we can relocate/shuffle when they hit bottom of board.
+
+def spawn_enemies(quantity):
+    for x in range(quantity):
+        print("enemy {}".format(x))
+        new_enemy = Enemy()
+        # attempts = 0
+        # keep trying to find a free spot. give it a few tries.
+        # while(pygame.sprite.spritecollide(new_enemy, enemy_group, False)):
+        #     new_enemy.rect.x = get_rand_x()
+        #     attempts = attempts + 1
+        #     if attempts > 10:  # prevent infinite looping here.
+        #         new_enemy.rect.y = new_enemy.rect.y + 20
+spawn_enemies(10)
+
+
+# background image sprites!
+lvl_one_bg = Bg_Picture('./assets/level one.png')
+# all_sprites_list.add(lvl_one_bg) # causes issues, painting over ships.
 
 # the mouse appears to lag a little bit, but cursor still gets action.
 # solution? no more mouse. still lags, but less game-breaking.
@@ -158,6 +206,10 @@ while not done:  # main loop
         # TODO: add sound/animation?
         # TODO: spawn loot drops here at position of collision.
 
+    # if all the enemies have been destroyed, lets spawn some new ones.
+    # TODO: further complicate with level formula/speeds?
+    if len(enemy_group) == 0:
+        spawn_enemies(10)
     # clear the screen
     screen.fill(black_color)
 
