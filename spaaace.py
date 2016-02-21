@@ -64,10 +64,11 @@ class Bg_Picture(S_Picture):
         S_Picture.__init__(self, self.image_filename, 0, -1782 + screen_height)
 
     def update(self):
-        self.rect.y = self.rect.y + 5  # move consistently towards player
+        # self.rect.y = self.rect.y + 5  # move consistently towards player
         # background level_one = 1782 height for a game-wide standard.
-        if self.rect.y > screen_height:
-            self.rect.y = 0
+        # if self.rect.y > screen_height:
+        #    self.rect.y = 0
+        pass
 
 
 class Enemy(S_Picture):
@@ -92,7 +93,7 @@ class Enemy(S_Picture):
             while(pygame.sprite.spritecollide(self, enemy_group, False)):
                 attempts = attempts + 1
                 if attempts > 10:  # prevent infinite looping here.
-                    self.rect.y = self.rect.y + 20
+                    self.rect.y = self.rect.y - 20
                     print("too many tries, moving up in y")
             enemy_group.add(self)
 
@@ -134,20 +135,11 @@ def get_rand_x():  # randomized location for new ships.
 def spawn_enemies(quantity):
     for x in range(quantity):
         print("enemy {}".format(x))
-        new_enemy = Enemy()
-        # attempts = 0
-        # keep trying to find a free spot. give it a few tries.
-        # while(pygame.sprite.spritecollide(new_enemy, enemy_group, False)):
-        #     new_enemy.rect.x = get_rand_x()
-        #     attempts = attempts + 1
-        #     if attempts > 10:  # prevent infinite looping here.
-        #         new_enemy.rect.y = new_enemy.rect.y + 20
+        print(Enemy())  # [ Enemy() for x in range(10) ] ?
 spawn_enemies(10)
-
 
 # background image sprites!
 lvl_one_bg = Bg_Picture('./assets/level one.png')
-# all_sprites_list.add(lvl_one_bg) # causes issues, painting over ships.
 
 # the mouse appears to lag a little bit, but cursor still gets action.
 # solution? no more mouse. still lags, but less game-breaking.
@@ -206,10 +198,10 @@ while not done:  # main loop
         # TODO: add sound/animation?
         # TODO: spawn loot drops here at position of collision.
 
-    # if all the enemies have been destroyed, lets spawn some new ones.
+    # if enemies have been destroyed, lets spawn some new ones.
     # TODO: further complicate with level formula/speeds?
-    if len(enemy_group) == 0:
-        spawn_enemies(10)
+    if len(enemy_group) < 5:
+        spawn_enemies(5)
     # clear the screen
     screen.fill(black_color)
 
@@ -217,6 +209,7 @@ while not done:  # main loop
     all_sprites_list.update()
 
     # draw all the things!
+    pygame.sprite.Group(lvl_one_bg).draw(screen)
     all_sprites_list.draw(screen)
     screen.blit(Text("Score: {}".format(score)).textSurf, (20, 5))
     FPS_text = Text("FPS: {:.4}".format(fpsClock.get_fps())).textSurf
