@@ -36,6 +36,10 @@ pygame.display.init()
 pygame.font.init()   # it caused issues. required for text.
 pygame.mixer.init()  # for sound
 
+test_sound_file = './assets/drip.ogg'
+test_sound = pygame.mixer.Sound(test_sound_file)
+
+
 fpsClock = pygame.time.Clock()  # allow limiting FPS
 
 # define some color constants
@@ -81,7 +85,7 @@ class Player_bullet(S_Picture):
     def update(self):
         self.rect.y = self.rect.y + self.v_y
         self.rect.x = self.rect.x + self.v_x
-        if self.rect.y == 0:  # destroy sprite if it's out of range.
+        if self.rect.y < 0:  # destroy sprite if it's out of range.
             p_bullet_sprites.remove(self)
             all_sprites_list.remove(self)
 
@@ -92,12 +96,12 @@ class Enemy(S_Picture):
         self.relocate()  # find a good initial position.
         enemy_group.add(self)
         all_sprites_list.add(self)
-    image_filename = './assets/Enemy_ship.png'
+    image_filename = './assets/scary_bubbles.png'
 
     def update(self):
         self.rect.y = self.rect.y + self.v_y
         self.rect.x = self.rect.x + self.v_x
-        if self.rect.y > 600:
+        if self.rect.y > screen_height:
             self.rect.y = 0
             self.relocate()
         if self.rect.x > screen_width:
@@ -219,6 +223,7 @@ while not done:  # main loop
                 enemy_group.remove(enemy)
                 p_bullet_sprites.remove(bullet)
                 all_sprites_list.remove(bullet, enemy)
+                test_sound.play()
         # TODO: add sound/animation?
         # TODO: spawn loot drops here at position of collision.
 
