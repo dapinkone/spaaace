@@ -142,6 +142,18 @@ def get_rand_x():  # randomized location for new ships.
 
 # need this so we can relocate/shuffle when they hit bottom of board.
 
+# detect pixel-perfect collision, see:
+# https://sivasantosh.wordpress.com/2012/07/23/using-masks-pygame/ for sauce.
+def pixel_collision(sprite_a, sprite_b):
+    rect_a = sprite_a.rect
+    rect_b = sprite_b.rect
+    offset_x, offset_y = (rect_b.left - rect_a.left), (rect_b.top - rect_a.top)
+    if(sprite_a.mask.overlap(sprite_b.mask, (offset_x, offset_y)) is not None):
+        # print("collision detected{} {}".format(sprite_a.image_filename, sprite_b.image_filename))
+        return True
+    else:
+        False
+
 def spawn_enemies(quantity):
     for x in range(quantity):
         print("enemy {}".format(x))
@@ -195,10 +207,15 @@ while not done:  # main loop
             # TODO: add bullet sound
 
     # now checking for collision player vs enemy ships.
-    for sprite in pygame.sprite.spritecollide(player_sprite,
-                                              enemy_group, True):
-        game_over()
+    # for sprite in pygame.sprite.spritecollide(player_sprite,
+    #                                           enemy_group, True):
+    #     game_over()
 
+    # pixel perfect collision?
+    for sprite in enemy_group:
+        if(pixel_collision(sprite, player_sprite)):
+            # print(sprite, sprite.rect
+            game_over()
     # collision enemy vs player bullets
     for sprite in pygame.sprite.groupcollide(enemy_group,
                                              p_bullet_sprites, True, True):
