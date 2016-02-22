@@ -8,19 +8,18 @@ TODO: item/powerup drops: Shield, weapon upgrade, diff ship, lives?
 TODO: add item drop: change of player ship(req weapon reset?)
 TODO: variety of enemy ships(diff ships=diff speeds/bullets)
 TODO: extra lives, and display thereof
-TODO: S_Picture: add frames_alive, how many frames an enemy/bullet survives
+TODO: S_Picture: add frames_alive, how many frames an enemy/bullet survives(needed?)
 TODO: S_Picture: implement health pools for players, enemies
 TODO: extend player_bullet class into general bullet class.
 TODO: bullet class: add bullet_type, owner(player/enemy), spawn_point
 TODO: implement diff patterns for bullets/enemies to follow based on type
 TODO: more predictable enemy spawning algorithm
-TODO: autofire functionality when holding button
 
 Graphics/sound:
 TODO: animations upon collisions, firing of weapons
 TODO: sounds - weapon, ship-ship collision, weapon-ship collision
 TODO: scrolling background, presenting "movement"
-TODO: boundaries to player ship: prevent moving off-screen to safety
+TODO: boundaries to player ship: prevent moving off-screen to safety?
 
 Controls:
 TODO: keyboard/controller control compatibility
@@ -31,6 +30,8 @@ TODO: game_over() continue/exit buttons
 TODO: game_over options button
 TODO: options menu: adjust music/sound vols w/ sliders/mute chkbox
 
+
+DONE: autofire functionality when holding button
 DONE: proper enemy size-specific placement # accidentally via collision.
 DONE: make collision system pixel perfect.
 DONE: randomly generate enemies
@@ -96,7 +97,7 @@ class Bullet(S_Picture):
 
     bullet_types = [{'filename': './assets/player_bullet.png',
                      'formula x': lambda x, s: s + math.sin(x) * (screen_width / 20),
-                     'formula y': lambda y: y - 3}
+                     'formula y': lambda y: y - 1}
                     ]
     # x, y for initial spawn location
     # bullet_type to be referenced for:
@@ -116,7 +117,7 @@ class Bullet(S_Picture):
         x_formula = self.bullet_types[self.bullet_type]['formula x']
         y_formula = self.bullet_types[self.bullet_type]['formula y']
         # TODO: !? how do I work this for f(x) with respect to time?
-        self.rect.x = x_formula(self.rect.x, self.spawn_x)
+        self.rect.x = x_formula(self.rect.y, self.spawn_x)
         self.rect.y = y_formula(self.rect.y)
         if self.rect.y < 0:  # destroy sprite if it's out of range.
             p_bullet_sprites.remove(self)
@@ -272,6 +273,9 @@ def main():
     pygame.mouse.set_visible(False)
     all_sprites_list.add(player_sprite)
     done = False
+    mouse_button_pressed = False
+    bullet_delay = 10  # allow a bullet fired every 10 frames
+    bullet_timer = bullet_delay
     while not done:  # main loop
         for event in pygame.event.get():
             if event.type in (pygame.QUIT, pygame.K_ESCAPE):
@@ -285,12 +289,20 @@ def main():
                 player_sprite.rect.x = x - player_sprite.image_width / 2
                 player_sprite.rect.y = y - player_sprite.image_height / 2
 
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_button_pressed = True
             elif event.type == pygame.MOUSEBUTTONUP:
+                mouse_button_pressed = False
+        if mouse_button_pressed is True:  # auto fire
+            if bullet_timer == 0:
                 mouse_x, mouse_y = event.pos
                 new_bullet = Bullet(mouse_x, mouse_y - 20)
                 p_bullet_sprites.add(new_bullet)
                 all_sprites_list.add(new_bullet)
                 # TODO: add bullet sound
+                bullet_timer = 10
+            else:
+                bullet_timer = bullet_timer - 1
 
         # pixel perfect collision player v enemy
         for sprite in enemy_group:
@@ -329,5 +341,5 @@ def main():
         pygame.display.flip()  # reveal changes
 
         # slow it down, if necessary.
-        fpsClock.tick(100)  # we don't need more than 60 fps for this. srsly.
+        fpsClock.tick(120)  # we don't need more than 60 fps for this. srsly.
 main()
