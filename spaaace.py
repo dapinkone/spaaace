@@ -3,19 +3,32 @@
 just getting started with pygame. writing a simple space shooter.
 Dependancies notes removed -- see ./Dependancies
 
-TODO: variety of enemy ships(diff ships=diff speeds/drops?)
+Gameplay:
 TODO: item/powerup drops: Shield, weapon upgrade, diff ship, lives?
 TODO: add item drop: change of player ship(req weapon reset?)
+TODO: variety of enemy ships(diff ships=diff speeds/drops?)
+TODO: extra lives, and display thereof
+TODO: extend player_bullet class into general bullet class.
+TODO: bullet class: add bullet_type, owner(player/enemy), spawn_point
+TODO: implement diff patterns for bullets/enemies to follow based on type
+TODO: S_Picture: add frames_alive, how many frames an enemy/bullet survives
+TODO: S_Picture: implement health pools for players, enemies
+TODO: more predictable enemy spawning algorithm
+
+Graphics/sound:
 TODO: animations upon collisions, firing of weapons
 TODO: sounds - weapon, ship-ship collision, weapon-ship collision
-TODO: extra lives, and display thereof
-TODO: some sort of level progression(inc difficulty, change background)
-TODO: would keyboard-driven controls be more responsive? add them.
-TODO: perhaps make enemy moving more diverse than straight lines?
-TODO: implement enemy health pools?
+TODO: scrolling background, presenting "movement"
 TODO: boundaries to player ship: prevent moving off-screen to safety
-TODO: PAUSE feature
-TODO: game_over() continue button.
+
+Controls:
+TODO: keyboard/controller control compatibility
+
+Menus:
+TODO: PAUSE menu
+TODO: game_over() continue/exit buttons
+TODO: game_over options button
+TODO: options menu: adjust music/sound vols w/ sliders/mute chkbox
 
 DONE: proper enemy size-specific placement # accidentally via collision.
 DONE: make collision system pixel perfect.
@@ -39,7 +52,6 @@ pygame.mixer.init()  # for sound
 
 test_sound_file = './assets/drip.ogg'
 test_sound = pygame.mixer.Sound(test_sound_file)
-
 
 fpsClock = pygame.time.Clock()  # allow limiting FPS
 
@@ -99,7 +111,7 @@ class Enemy(S_Picture):
             self.relocate()
         if self.rect.x > screen_width:
             self.rect.x = 0
-        if self.rect.x < 0:
+        if self.rect.x < 0 - self.image.get_width():
             self.rect.x = screen_width
 
     def relocate(self):
@@ -131,7 +143,7 @@ class Text(pygame.sprite.Sprite):
 ##################################
 mouse_x, mouse_y = 0, 0
 score = 0
-timer = 0  # tracking how long we've been in-game.
+start_time = fpsClock.get_time()  # tracking how long we've been in-game.
 
 # set_mode(width, height) making the window
 screen = pygame.display.set_mode((640, 640))
@@ -160,9 +172,7 @@ def pixel_collision(sprite_a, sprite_b):  # pixel perfect collision
 
 def spawn_enemies(quantity):
     for x in range(quantity):
-        print("enemy {}".format(x))
-        print(Enemy(0, screen_height / 2, (random.randint(-1, 1), 1)))
-
+        Enemy(0, screen_height / 2, (random.randint(-1, 1), 1))
 def game_over():  # game over screen/menu?
     pygame.mouse.set_visible(True)
     global score
@@ -191,8 +201,8 @@ def game_over():  # game over screen/menu?
                     sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pass  # TODO add continue button.
-                #print(again_text.get_rect())
-                #print(mouse_y, mouse_x)
+                # print(again_text.get_rect())
+                # print(mouse_y, mouse_x)
             # else:
             #    print(event, event.type)
             #    main()
@@ -201,6 +211,8 @@ def game_over():  # game over screen/menu?
 def reset_game():
     global score
     score = 0
+    global start_time
+    start_time = fpsClock.get_time()
     for s in all_sprites_list:
         all_sprites_list.remove(s)
     for s in p_bullet_sprites:
@@ -213,7 +225,7 @@ player_sprite = Player(300, 500)
 all_sprites_list = pygame.sprite.Group()
 p_bullet_sprites = pygame.sprite.Group()
 enemy_group      = pygame.sprite.Group()
-spawn_enemies(10)
+# spawn_enemies(10)
 
 def main():
     pygame.mouse.set_visible(False)
@@ -257,8 +269,9 @@ def main():
             # TODO: spawn loot drops here at position of collision.
 
         # if enemies have been destroyed, lets spawn some new ones.
-        # TODO: further complicate with level formula/speeds?
-        timer = pygame.time.get_ticks() / 10000
+        # TODO: further complicate with level formula/speeds/balance
+        timer = int((fpsClock.get_time() - start_time) / 15)
+        print(timer)
         if len(enemy_group) < timer:
             spawn_enemies(2)
 
