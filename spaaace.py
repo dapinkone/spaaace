@@ -6,14 +6,15 @@ Dependancies notes removed -- see ./Dependancies
 Gameplay:
 TODO: item/powerup drops: Shield, weapon upgrade, diff ship, lives?
 TODO: add item drop: change of player ship(req weapon reset?)
-TODO: variety of enemy ships(diff ships=diff speeds/drops?)
+TODO: variety of enemy ships(diff ships=diff speeds/bullets)
 TODO: extra lives, and display thereof
+TODO: S_Picture: add frames_alive, how many frames an enemy/bullet survives
+TODO: S_Picture: implement health pools for players, enemies
 TODO: extend player_bullet class into general bullet class.
 TODO: bullet class: add bullet_type, owner(player/enemy), spawn_point
 TODO: implement diff patterns for bullets/enemies to follow based on type
-TODO: S_Picture: add frames_alive, how many frames an enemy/bullet survives
-TODO: S_Picture: implement health pools for players, enemies
 TODO: more predictable enemy spawning algorithm
+TODO: autofire functionality when holding button
 
 Graphics/sound:
 TODO: animations upon collisions, firing of weapons
@@ -43,6 +44,7 @@ DONE: death/game over condition
 import pygame
 import sys
 import random
+import math
 
 # pygame.init mysteriously crashes on debian when pygame.quit is called.
 # lets use pygame.display instead, and hope that doesn't cause issues.
@@ -56,15 +58,17 @@ test_sound = pygame.mixer.Sound(test_sound_file)
 fpsClock = pygame.time.Clock()  # allow limiting FPS
 
 # DEFINE CONSTANTS
-white = pygame.Color(255, 255, 255)  # standard (r, g, b)
-blue  = pygame.Color(50, 50, 255)
-red   = pygame.Color(255, 0, 0)
-black = pygame.Color(0, 0, 0)
-green = pygame.Color(0, 255, 0)
+WHITE = pygame.Color(255, 255, 255)  # standard (r, g, b)
+BLUE = pygame.Color(50, 50, 255)
+RED = pygame.Color(255, 0, 0)
+BLACK = pygame.Color(0, 0, 0)
+GREEN = pygame.Color(0, 255, 0)
 
 #########################################
 # CLASSES
 #########################################
+
+
 class S_Picture(pygame.sprite.Sprite):
 
     def __init__(self, image_filename, x, y):
@@ -73,29 +77,55 @@ class S_Picture(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = x, y
         self.mask = pygame.mask.from_surface(self.image)
+        self.frames_alive = 0
+        self.image_height = self.image.get_height()
+        self.image_width  = self.image.get_width()
+
+    def update(self):
+        self.frames_alive = self.frames_alive + 1
+
 
 class Player(S_Picture):
+
     def __init__(self, x, y):
         S_Picture.__init__(self, self.image_filename, x, y)
     image_filename = './assets/SpaceShip.png'
 
-class Player_bullet(S_Picture):
-    # x, y for current location.
-    # v_x, v_y for vector/speed/movement calculations.
-    def __init__(self, x, y, vector = (0, -5)):
+
+class Bullet(S_Picture):
+
+    bullet_types = [{'filename': './assets/player_bullet.png',
+                     'formula x': lambda x, s: s + math.sin(x) * (screen_width / 20),
+                     'formula y': lambda y: y - 3}
+                    ]
+    # x, y for initial spawn location
+    # bullet_type to be referenced for:
+        # bullet img file name
+        # bullet trajectory formula choice and calculations
+    # hostile to be True or False
+
+    def __init__(self, x, y, hostile=False, bullet_type=0):
+        self.spawn_x = x
+        self.spawn_y = y
+        self.bullet_type = bullet_type
+        self.hostile = hostile
+        self.image_filename = self.bullet_types[bullet_type]['filename']
         S_Picture.__init__(self, self.image_filename, x, y)
-        self.v_x, self.v_y = vector
-    image_filename = './assets/player_bullet.png'
 
     def update(self):
-        self.rect.y = self.rect.y + self.v_y
-        self.rect.x = self.rect.x + self.v_x
+        x_formula = self.bullet_types[self.bullet_type]['formula x']
+        y_formula = self.bullet_types[self.bullet_type]['formula y']
+        # TODO: !? how do I work this for f(x) with respect to time?
+        self.rect.x = x_formula(self.rect.x, self.spawn_x)
+        self.rect.y = y_formula(self.rect.y)
         if self.rect.y < 0:  # destroy sprite if it's out of range.
             p_bullet_sprites.remove(self)
             all_sprites_list.remove(self)
 
+
 class Enemy(S_Picture):
-    def __init__(self, x = 0, y = 0, vector = (0, 1)):
+
+    def __init__(self, x=300, y=0, vector=(0, 1)):
         S_Picture.__init__(self, self.image_filename, x, y)
         self.v_x, self.v_y = vector
         self.relocate()  # find a good initial position.
@@ -111,29 +141,33 @@ class Enemy(S_Picture):
             self.relocate()
         if self.rect.x > screen_width:
             self.rect.x = 0
-        if self.rect.x < 0 - self.image.get_width():
+        if self.rect.x < 0 - self.image_width:
             self.rect.x = screen_width
 
     def relocate(self):
-            attempts = 0
-            # keep trying to find a free spot. give it a few tries.
-            enemy_group.remove(self)  # if it already exists = inf collision
-            self.rect.x = get_rand_x()
-            self.rect.y = 0
-            while(pygame.sprite.spritecollide(self, enemy_group, False)):
-                attempts = attempts + 1
-                if attempts > 10:  # prevent infinite looping here.
-                    self.rect.y = self.rect.y - 20
-                    # print("too many tries, moving up in y")
-            enemy_group.add(self)
+        attempts = 0
+        # keep trying to find a free spot. give it a few tries.
+        enemy_group.remove(self)  # if it already exists = inf collision
+        self.rect.x = get_rand_x()
+        self.rect.y = 0
+        while(pygame.sprite.spritecollide(self, enemy_group, False)):
+            attempts = attempts + 1
+            # prevent inf loop by repositioning in y
+            if attempts > 10:
+                self.rect.y = self.rect.y - 20
+        enemy_group.add(self)
+
 
 class Bg_Picture(S_Picture):
+
     def __init__(self, image_filename):
         self.image_filename = image_filename
         S_Picture.__init__(self, self.image_filename, 0, -1782 + screen_height)
 
+
 class Text(pygame.sprite.Sprite):
-    def __init__(self, text, size=16, color=white, width=40, height=40):
+
+    def __init__(self, text, size=16, color=WHITE, width=40, height=40):
         pygame.sprite.Sprite.__init__(self)
 
         self.font = pygame.font.SysFont("Arial", size)
@@ -147,19 +181,21 @@ start_time = fpsClock.get_time()  # tracking how long we've been in-game.
 
 # set_mode(width, height) making the window
 screen = pygame.display.set_mode((640, 640))
-screen_width  = screen.get_width()
+screen_width = screen.get_width()
 screen_height = screen.get_height()
 pygame.display.set_caption('SPAAACE bubbles!')
 
 all_sprites_list = pygame.sprite.Group()
 p_bullet_sprites = pygame.sprite.Group()
-enemy_group      = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
 
 lvl_one_bg = Bg_Picture('./assets/level one.png')
+
 
 def get_rand_x():  # randomized location for new ships.
     # TODO: this may be more efficient taking into account width of the ship
     return(random.randrange(0, screen_width - 60))
+
 
 def pixel_collision(sprite_a, sprite_b):  # pixel perfect collision
     rect_a = sprite_a.rect
@@ -170,18 +206,21 @@ def pixel_collision(sprite_a, sprite_b):  # pixel perfect collision
     else:
         return False
 
+
 def spawn_enemies(quantity):
     for x in range(quantity):
         Enemy(0, screen_height / 2, (random.randint(-1, 1), 1))
+
+
 def game_over():  # game over screen/menu?
     pygame.mouse.set_visible(True)
     global score
-    game_over_text = Text("GAME OVER", 40, white).textSurf
-    game_over_x    = screen_width / 2 - game_over_text.get_width() / 2
-    score_text     = Text("Score: {}".format(score), 30, white).textSurf
-    score_text_x   = screen_width / 2 - score_text.get_width() / 2
-    again_text     = Text("Press Space", 30, green).textSurf
-    again_text_x   = screen_width / 2 - again_text.get_width() / 2
+    game_over_text = Text("GAME OVER", 40, WHITE).textSurf
+    game_over_x = screen_width / 2 - game_over_text.get_width() / 2
+    score_text = Text("Score: {}".format(score), 30, WHITE).textSurf
+    score_text_x = screen_width / 2 - score_text.get_width() / 2
+    again_text = Text("Press Space", 30, GREEN).textSurf
+    again_text_x = screen_width / 2 - again_text.get_width() / 2
     screen.blit(game_over_text, (game_over_x, screen_height / 3))
     screen.blit(score_text, (score_text_x, screen_height / 2))
     screen.blit(again_text, (again_text_x, screen_height / 1.5))
@@ -208,6 +247,7 @@ def game_over():  # game over screen/menu?
             #    main()
         fpsClock.tick(60)
 
+
 def reset_game():
     global score
     score = 0
@@ -224,8 +264,9 @@ def reset_game():
 player_sprite = Player(300, 500)
 all_sprites_list = pygame.sprite.Group()
 p_bullet_sprites = pygame.sprite.Group()
-enemy_group      = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
 # spawn_enemies(10)
+
 
 def main():
     pygame.mouse.set_visible(False)
@@ -241,12 +282,12 @@ def main():
             elif event.type == pygame.MOUSEMOTION:
                 x, y = pygame.mouse.get_pos()
                 # put center of ship on mouse, not corner of picture.
-                player_sprite.rect.x = x - 33
-                player_sprite.rect.y = y - 33
+                player_sprite.rect.x = x - player_sprite.image_width / 2
+                player_sprite.rect.y = y - player_sprite.image_height / 2
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 mouse_x, mouse_y = event.pos
-                new_bullet = Player_bullet(mouse_x, mouse_y - 20)
+                new_bullet = Bullet(mouse_x, mouse_y - 20)
                 p_bullet_sprites.add(new_bullet)
                 all_sprites_list.add(new_bullet)
                 # TODO: add bullet sound
@@ -271,7 +312,7 @@ def main():
         # if enemies have been destroyed, lets spawn some new ones.
         # TODO: further complicate with level formula/speeds/balance
         timer = int((fpsClock.get_time() - start_time) / 15)
-        print(timer)
+
         if len(enemy_group) < timer:
             spawn_enemies(2)
 
@@ -288,5 +329,5 @@ def main():
         pygame.display.flip()  # reveal changes
 
         # slow it down, if necessary.
-        fpsClock.tick(60)  # we don't need more than 60 fps for this. srsly.
+        fpsClock.tick(100)  # we don't need more than 60 fps for this. srsly.
 main()
