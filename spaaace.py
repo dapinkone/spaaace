@@ -8,21 +8,24 @@ TODO: item/powerup drops: Shield, weapon upgrade, diff ship, lives?
 TODO: add item drop: change of player ship(req weapon reset?)
 TODO: variety of enemy ships(diff ships=diff speeds/bullets)
 TODO: extra lives, and display thereof
-TODO: S_Picture: implement health pools for players, enemies
+TODO: display a health bar
 TODO: extend player_bullet class into general bullet class.
-TODO: bullet class: add bullet_type, owner(player/enemy), spawn_point
 TODO: implement diff patterns for bullets/enemies to follow based on type
 TODO: more predictable enemy spawning algorithm
 TODO: Boss enemies
+TODO: energy bar for a special weapon(right click?)
+
 
 Graphics/sound:
 TODO: animations upon collisions
 TODO: sounds - weapons, ship-ship collision, weapon-ship collision
-TODO: scrolling background, presenting "movement"
+TODO: scrolling background, presenting movement/progression
 TODO: boundaries to player ship: prevent moving off-screen to safety?
+TODO: bullets/gameplay look choppy as fuck. what do?
 
 Controls:
 TODO: keyboard/controller control compatibility
+TODO: autofire functionality has broken click-compatibility.
 
 Menus:
 TODO: PAUSE menu
@@ -30,7 +33,8 @@ TODO: game_over() continue/exit buttons
 TODO: game_over options button
 TODO: options menu: adjust music/sound vols w/ sliders/mute chkbox
 
-
+DONE: S_Picture: implement health pools for players, enemies
+DONE: bullet class: add bullet_type, owner(player/enemy), spawn_point
 DONE: autofire functionality when holding button
 DONE: proper enemy size-specific placement # accidentally via collision.
 DONE: make collision system pixel perfect.
@@ -94,25 +98,26 @@ class Player(S_Picture):
     def __init__(self, x, y):
         S_Picture.__init__(self, self.image_filename, x, y)
     image_filename = './assets/SpaceShip.png'
+    bullet_type = 0  # default type....this seems cryptic. #TODO #FIXME
 
 
 class Bullet(S_Picture):
     # TODO: seriously need a better solution here than lambdas.
     bullet_types = [{'filename': './assets/player_bullet.png',  # default
                      'formula x': lambda x, s: s,  # horizontal trajectory
-                     'formula y': lambda y: y - 3},   # vertical trajectory
+                     'formula y': lambda y: y - 5},   # vertical trajectory
                     {'filename': './assets/bullet_2.png',
                      # lambda current_x, spawn_x
                      'formula x': lambda x, s: s + math.sin(x) *
                      (screen_width / 20),
                      'formula y': lambda y: y - 3},
                     ]
+
     # x, y for initial spawn location
+    # hostile to be True or False. hostile = dmg to player.
     # bullet_type to be referenced for:
     # bullet img file name
     # bullet trajectory formula choice and calculations
-    # hostile to be True or False
-
     def __init__(self, x, y, hostile=False, bullet_type=0):
         self.spawn_x = x
         self.spawn_y = y
@@ -139,7 +144,7 @@ class Enemy(S_Picture):
         S_Picture.__init__(self, self.image_filename, x, y)
         self.v_x, self.v_y = vector
         self.relocate()  # find a good initial position.
-        self.health = 4
+        self.health = 2
         enemy_group.add(self)
         all_sprites_list.add(self)
     image_filename = './assets/scary_bubbles.png'
@@ -217,11 +222,9 @@ def pixel_collision(sprite_a, sprite_b):  # pixel perfect collision
     else:
         return False
 
-
 def spawn_enemies(quantity):
     for x in range(quantity):
         Enemy(0, screen_height / 2, (random.randint(-1, 1), 1))
-
 
 def game_over():  # game over screen/menu?
     pygame.mouse.set_visible(True)
@@ -284,7 +287,7 @@ def main():
     all_sprites_list.add(player_sprite)
     done = False
     mouse_button_pressed = False
-    bullet_delay = 30  # allow a bullet fired every N frames
+    bullet_delay = 5  # allow a bullet fired every N frames
     bullet_timer = bullet_delay
     while not done:  # main loop
         for event in pygame.event.get():
@@ -308,32 +311,38 @@ def main():
                 mouse_x, mouse_y = event.pos
                 new_bullet = Bullet(mouse_x,
                                     mouse_y - player_sprite.image_height / 2,
-                                    False, 0)
+                                    False,
+                                    Player.bullet_type)
                 p_bullet_sprites.add(new_bullet)
                 all_sprites_list.add(new_bullet)
                 # TODO: add bullet sound
-                bullet_timer = 10
+                bullet_timer = bullet_delay
             else:
                 bullet_timer = bullet_timer - 1
 
         # pixel perfect collision player v enemy
         for sprite in enemy_group:
             if(pixel_collision(sprite, player_sprite)):
+                # this is where the health bar comes in?
                 game_over()
         # collision enemy vs bullets
         for bullet in p_bullet_sprites:
             for enemy in enemy_group:
                 if(pixel_collision(bullet, enemy)):
-                    global score
+                    # deal damage to both parties.
+                    temp = enemy.health
+                    enemy.health  = enemy.health - bullet.health
+                    bullet.health = bullet.health - temp
+                    # parsing out the consequences.
                     if enemy.health <= 0:
                         enemy_group.remove(enemy)
                         all_sprites_list.remove(enemy)
+                        global score
                         score = score + 1
                         test_sound.play()
-                    else:
-                        enemy.health = enemy.health - 1
-                    p_bullet_sprites.remove(bullet)
-                    all_sprites_list.remove(bullet)
+                    if bullet.health <= 0:
+                        p_bullet_sprites.remove(bullet)
+                        all_sprites_list.remove(bullet)
             # TODO: add sound/animation?
             # TODO: spawn loot drops here at position of collision.
 
@@ -357,5 +366,5 @@ def main():
         pygame.display.flip()  # reveal changes
 
         # slow it down, if necessary.
-        fpsClock.tick(120)  # we don't need more than 60 fps for this. srsly.
+        fpsClock.tick(60)  # we don't need more than 60 fps for this. srsly.
 main()
