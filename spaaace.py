@@ -8,33 +8,38 @@ TODO: item/powerup drops: Shield, weapon upgrade, diff ship, lives?
 TODO: add item drop: change of player ship(req weapon reset?)
 TODO: variety of enemy ships(diff ships=diff speeds/bullets)
 TODO: extra lives, and display thereof
-TODO: display a health bar
-TODO: extend player_bullet class into general bullet class.
 TODO: implement diff patterns for bullets/enemies to follow based on type
 TODO: more predictable enemy spawning algorithm
-TODO: Boss enemies
+TODO: Boss enemies?
+TODO: end of stage, stage transition
 TODO: energy bar for a special weapon(right click?)
-
+TODO: Track/display high score; local db/file to store
 
 Graphics/sound:
 TODO: animations upon collisions
 TODO: sounds - weapons, ship-ship collision, weapon-ship collision
 TODO: scrolling background, presenting movement/progression
 TODO: boundaries to player ship: prevent moving off-screen to safety?
-TODO: bullets/gameplay look choppy as fuck. what do?
 
 Controls:
 TODO: keyboard/controller control compatibility
 TODO: autofire functionality has broken click-compatibility.
 
 Menus:
+TODO: Main menu, stage selection
 TODO: PAUSE menu
 TODO: game_over() continue/exit buttons
 TODO: game_over options button
 TODO: options menu: adjust music/sound vols w/ sliders/mute chkbox
 
-DONE: S_Picture: implement health pools for players, enemies
+Misc:
+TODO: metrics, enemies/s spawned/destroyed, pts/s earned.
+TODO: port to earlier python version(?) for compilation/easier install
+
+
+DONE: S_Picture: implement health pools for enemies, bullets
 DONE: bullet class: add bullet_type, owner(player/enemy), spawn_point
+DONE: extend player_bullet class into general bullet class.
 DONE: autofire functionality when holding button
 DONE: proper enemy size-specific placement # accidentally via collision.
 DONE: make collision system pixel perfect.
@@ -72,22 +77,23 @@ GREEN = pygame.Color(0, 255, 0)
 #########################################
 # CLASSES
 #########################################
-
-
 class S_Picture(pygame.sprite.Sprite):
 
     def __init__(self, image_filename, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image  = pygame.image.load(image_filename).convert_alpha()
-        self.rect   = self.image.get_rect()
+        self.image = pygame.image.load(image_filename).convert_alpha()
+        # rotation of images causes deformation.
+        # keep origin on file for reference.
+        self.origin_img = self.image
+        self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.mask   = pygame.mask.from_surface(self.image)
+        self.mask = pygame.mask.from_surface(self.image)
         self.frames_alive = 0
         self.image_height = self.image.get_height()
-        self.image_width  = self.image.get_width()
+        self.image_width = self.image.get_width()
         # enemies, player, bullets, etc. they all need health pools.
-        self.health       = 4
+        self.health = 4
 
     def update(self):
         self.frames_alive = self.frames_alive + 1
@@ -100,17 +106,39 @@ class Player(S_Picture):
     image_filename = './assets/SpaceShip.png'
     bullet_type = 0  # default type....this seems cryptic. #TODO #FIXME
 
+    def spawn_bullet(self, mouse_x, mouse_y):
+        new_bullet = Bullet(mouse_x,
+                            mouse_y - player_sprite.image_height / 2,
+                            False,
+                            player_sprite.bullet_type)
+        p_bullet_sprites.add(new_bullet)
+        all_sprites_list.add(new_bullet)
+
 
 class Bullet(S_Picture):
     # TODO: seriously need a better solution here than lambdas.
-    bullet_types = [{'filename': './assets/player_bullet.png',  # default
-                     'formula x': lambda x, s: s,  # horizontal trajectory
-                     'formula y': lambda y: y - 5},   # vertical trajectory
-                    {'filename': './assets/bullet_2.png',
+    bullet_types = [{'filename' : './assets/player_bullet.png',  # default
+                     'formula x': lambda x, s: s,   # horizontal trajectory
+                     'formula y': lambda y: y - 8,  # vertical trajectory
+                     # degrees for angle transform. 0 = no change.
+                     'formula d': lambda d: 0,
+                     'health'   : 1},
+
+                    {'filename' : './assets/bullet_2.png',
                      # lambda current_x, spawn_x
                      'formula x': lambda x, s: s + math.sin(x) *
-                     (screen_width / 20),
-                     'formula y': lambda y: y - 3},
+                     (screen_width / 20),  # pep8 pls ;_;
+                     'formula y': lambda y: y - 8,
+                     'formula d': lambda d: 0,
+                     'health'   : 1},
+
+                    {'filename' : './assets/wave_bullet.png',
+                     # lambda current_x, spawn_x
+                     'formula x': lambda x, s: s + math.sin(x) *
+                     (screen_width / 20),  # pep8 pls ;_;
+                     'formula y': lambda y: y - 8,
+                     'formula d': lambda d: 0,
+                     'health'   : 3}
                     ]
 
     # x, y for initial spawn location
@@ -125,13 +153,16 @@ class Bullet(S_Picture):
         self.hostile = hostile
         self.image_filename = self.bullet_types[bullet_type]['filename']
         S_Picture.__init__(self, self.image_filename, x, y)
-        self.health = 1
+        self.health = self.bullet_types[player_sprite.bullet_type]['health']
 
     def update(self):
-        x_formula = self.bullet_types[self.bullet_type]['formula x']
-        y_formula = self.bullet_types[self.bullet_type]['formula y']
-        # TODO: !? how do I work this for f(x) with respect to time?
-        self.rect.x = x_formula(self.rect.y, self.spawn_x)
+        x_formula   = self.bullet_types[self.bullet_type]['formula x']
+        y_formula   = self.bullet_types[self.bullet_type]['formula y']
+        # d = delta for the angle of the bullet
+        d_formula   = self.bullet_types[self.bullet_type]['formula d']
+        self.image  = pygame.transform.rotate(self.origin_img,
+                                              d_formula(self.rect.y))
+        self.rect.x = x_formula(self.rect.y, self.spawn_x) - self.image_width / 2
         self.rect.y = y_formula(self.rect.y)
         if self.rect.y < 0:  # destroy sprite if it's out of range.
             p_bullet_sprites.remove(self)
@@ -173,6 +204,14 @@ class Enemy(S_Picture):
                 self.rect.y = self.rect.y - 20
         enemy_group.add(self)
 
+class Upgrade(S_Picture):
+    image_filename = './assets/upgrade_cir.png'
+
+    def __init__(self, x, y):
+        self.upgrade_type = 0  # TODO: diff types of upgrade
+        S_Picture.__init__(self, self.image_filename, x, y)
+        all_sprites_list.add(self)
+        upgrade_group.add(self)
 
 class Bg_Picture(S_Picture):
 
@@ -188,6 +227,7 @@ class Text(pygame.sprite.Sprite):
 
         self.font = pygame.font.SysFont("Arial", size)
         self.textSurf = self.font.render(text, 1, color)
+
 ###################################
 # initialize variables
 ##################################
@@ -196,7 +236,7 @@ score = 0
 start_time = fpsClock.get_time()  # tracking how long we've been in-game.
 
 # set_mode(width, height) making the window
-screen = pygame.display.set_mode((640, 640))
+screen = pygame.display.set_mode((640, 960))
 screen_width = screen.get_width()
 screen_height = screen.get_height()
 pygame.display.set_caption('SPAAACE bubbles!')
@@ -207,6 +247,9 @@ enemy_group = pygame.sprite.Group()
 
 lvl_one_bg = Bg_Picture('./assets/level one.png')
 
+##############################
+# function definitions
+#############################
 
 def get_rand_x():  # randomized location for new ships.
     # TODO: this may be more efficient taking into account width of the ship
@@ -222,9 +265,11 @@ def pixel_collision(sprite_a, sprite_b):  # pixel perfect collision
     else:
         return False
 
+
 def spawn_enemies(quantity):
     for x in range(quantity):
         Enemy(0, screen_height / 2, (random.randint(-1, 1), 1))
+
 
 def game_over():  # game over screen/menu?
     pygame.mouse.set_visible(True)
@@ -249,7 +294,7 @@ def game_over():  # game over screen/menu?
             elif event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                     reset_game()
-                if event.key in (pygame.K_ESCAPE):
+                if event.key is pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -259,8 +304,7 @@ def game_over():  # game over screen/menu?
             # else:
             #    print(event, event.type)
             #    main()
-        fpsClock.tick(60)
-
+        fpsClock.tick(15)
 
 def reset_game():
     global score
@@ -273,12 +317,15 @@ def reset_game():
         p_bullet_sprites.remove(s)
     for s in enemy_group:
         enemy_group.remove(s)
+    for s in upgrade_group:
+        upgrade_group.remove(s)
     main()
 
 player_sprite = Player(300, 500)
 all_sprites_list = pygame.sprite.Group()
 p_bullet_sprites = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
+upgrade_group = pygame.sprite.Group()
 # spawn_enemies(10)
 
 
@@ -287,7 +334,7 @@ def main():
     all_sprites_list.add(player_sprite)
     done = False
     mouse_button_pressed = False
-    bullet_delay = 5  # allow a bullet fired every N frames
+    bullet_delay = 3  # allow a bullet fired every N frames
     bullet_timer = bullet_delay
     while not done:  # main loop
         for event in pygame.event.get():
@@ -308,14 +355,8 @@ def main():
                 mouse_button_pressed = False
         if mouse_button_pressed is True:  # auto fire
             if bullet_timer == 0:
-                mouse_x, mouse_y = event.pos
-                new_bullet = Bullet(mouse_x,
-                                    mouse_y - player_sprite.image_height / 2,
-                                    False,
-                                    Player.bullet_type)
-                p_bullet_sprites.add(new_bullet)
-                all_sprites_list.add(new_bullet)
-                # TODO: add bullet sound
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                player_sprite.spawn_bullet(mouse_x, mouse_y)
                 bullet_timer = bullet_delay
             else:
                 bullet_timer = bullet_timer - 1
@@ -325,34 +366,47 @@ def main():
             if(pixel_collision(sprite, player_sprite)):
                 # this is where the health bar comes in?
                 game_over()
+
         # collision enemy vs bullets
         for bullet in p_bullet_sprites:
             for enemy in enemy_group:
                 if(pixel_collision(bullet, enemy)):
                     # deal damage to both parties.
                     temp = enemy.health
-                    enemy.health  = enemy.health - bullet.health
+                    enemy.health = enemy.health - bullet.health
                     bullet.health = bullet.health - temp
                     # parsing out the consequences.
-                    if enemy.health <= 0:
+                    if enemy.health <= 0:  # enemy death
                         enemy_group.remove(enemy)
                         all_sprites_list.remove(enemy)
                         global score
                         score = score + 1
                         test_sound.play()
-                    if bullet.health <= 0:
+                        # upgrade spawn at random chance
+                        if(random.randrange(30) > 25):
+                            Upgrade(enemy.rect.x, enemy.rect.y)
+                    if bullet.health <= 0:  # bullet death
                         p_bullet_sprites.remove(bullet)
                         all_sprites_list.remove(bullet)
             # TODO: add sound/animation?
-            # TODO: spawn loot drops here at position of collision.
+
+        # collision player v upgrades
+        for upgrade in upgrade_group:
+            if(pixel_collision(player_sprite, upgrade)):
+                upgrade_group.remove(upgrade)
+                all_sprites_list.remove(upgrade)
+                # player_sprite.bullet_type + 1
+                if player_sprite.bullet_type < 2:
+                    player_sprite.bullet_type = player_sprite.bullet_type + 1
 
         # if enemies have been destroyed, lets spawn some new ones.
         # TODO: further complicate with level formula/speeds/balance
-        timer = int((fpsClock.get_time() - start_time) / 5)
+        timer = abs(int((fpsClock.get_time() - start_time) / 5))
 
         if len(enemy_group) < timer:
             spawn_enemies(2)
-
+        print("timer: {}".format(timer))
+        print("Currently {} enemies fielded.".format(len(enemy_group)))
         # update all the things!
         all_sprites_list.update()
 
