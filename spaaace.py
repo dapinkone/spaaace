@@ -233,7 +233,7 @@ class Text(pygame.sprite.Sprite):
 mouse_x, mouse_y = 0, 0
 score = 0
 high_score = 0
-start_time = time.clock()  # tracking how long we've been in-game.
+start_time = time.time()  # tracking how long we've been in-game.
 
 # set_mode(width, height) making the window
 screen = pygame.display.set_mode((640, 960))
@@ -308,12 +308,9 @@ def game_over():  # game over screen/menu?
 
 def reset_game():
     global score
-    global high_score
-    if high_score <= score:
-        high_score = score
     score = 0
     global start_time
-    start_time = time.clock()
+    start_time = time.time()
     for s in all_sprites_list:
         all_sprites_list.remove(s)
     for s in p_bullet_sprites:
@@ -406,12 +403,13 @@ def main():
 
         # if enemies have been destroyed, lets spawn some new ones.
         # TODO: further complicate with level formula/speeds/balance
-        timer = (time.clock() - start_time) / 5
+        timer = int(time.time() - start_time)
 
-        if len(enemy_group) < timer:
+        if len(enemy_group) < timer + 1 / (1 + sum(range(1, timer))):
             spawn_enemies(2)
-        print("timer: {}".format(start_time))
-        print("Currently {} enemies fielded.".format(len(enemy_group)))
+        # print("timer: {} {}".format(start_time, timer))
+        # print("Currently {} enemies fielded.".format(len(enemy_group)))
+        # print("all sprites:  {}".format(len(all_sprites_list)))
         # update all the things!
         all_sprites_list.update()
 
@@ -422,6 +420,15 @@ def main():
         screen.blit(Text("Score: {}".format(score)).textSurf, (20, 5))
         FPS_text = Text("FPS: {:.4}".format(fpsClock.get_fps())).textSurf
         screen.blit(FPS_text, (screen_width - FPS_text.get_width() - 20, 5))
+
+        global high_score
+        if high_score <= score:
+            high_score = score
+
+        High_score_text = Text("High Score: {}".format(
+            high_score)).textSurf  # pep8 pls ;_;
+        screen.blit(High_score_text, ((screen_width / 2 -
+                                      High_score_text.get_width() / 2), 5))
         pygame.display.flip()  # reveal changes
 
         # slow it down, if necessary.
