@@ -54,8 +54,8 @@ DONE: death/game over condition
 import pygame
 import sys
 import random
-import math
-
+# import math
+import time
 # pygame.init mysteriously crashes on debian when pygame.quit is called.
 # lets use pygame.display instead, and hope that doesn't cause issues.
 pygame.display.init()
@@ -123,22 +123,21 @@ class Bullet(S_Picture):
                      # degrees for angle transform. 0 = no change.
                      'formula d': lambda d: 0,
                      'health'   : 1},
-
-                    {'filename' : './assets/bullet_2.png',
-                     # lambda current_x, spawn_x
-                     'formula x': lambda x, s: s + math.sin(x) *
-                     (screen_width / 20),  # pep8 pls ;_;
-                     'formula y': lambda y: y - 8,
-                     'formula d': lambda d: 0,
-                     'health'   : 1},
-
-                    {'filename' : './assets/wave_bullet.png',
-                     # lambda current_x, spawn_x
-                     'formula x': lambda x, s: s + math.sin(x) *
-                     (screen_width / 20),  # pep8 pls ;_;
-                     'formula y': lambda y: y - 8,
-                     'formula d': lambda d: 0,
-                     'health'   : 3}
+                    # {'filename' : './assets/bullet_2.png',
+                    # # lambda current_x, spawn_x
+                    # 'formula x': lambda x, s: s + math.sin(x) *
+                    # (screen_width / 20),  # pep8 pls ;_;
+                    # 'formula y': lambda y: y - 8,
+                    # 'formula d': lambda d: 0,
+                    # 'health'   : 1},
+                    # #this one is aweful. gamebreaking aweful.
+                    # {'filename' : './assets/wave_bullet.png',
+                    #  # lambda current_x, spawn_x
+                    #  'formula x': lambda x, s: s + math.sin(x) *
+                    #  (screen_width / 20),  # pep8 pls ;_;
+                    #  'formula y': lambda y: y - 8,
+                    #  'formula d': lambda d: 0,
+                    #  'health'   : 3}
                     ]
 
     # x, y for initial spawn location
@@ -233,7 +232,8 @@ class Text(pygame.sprite.Sprite):
 ##################################
 mouse_x, mouse_y = 0, 0
 score = 0
-start_time = fpsClock.get_time()  # tracking how long we've been in-game.
+high_score = 0
+start_time = time.clock()  # tracking how long we've been in-game.
 
 # set_mode(width, height) making the window
 screen = pygame.display.set_mode((640, 960))
@@ -308,9 +308,12 @@ def game_over():  # game over screen/menu?
 
 def reset_game():
     global score
+    global high_score
+    if high_score <= score:
+        high_score = score
     score = 0
     global start_time
-    start_time = fpsClock.get_time()
+    start_time = time.clock()
     for s in all_sprites_list:
         all_sprites_list.remove(s)
     for s in p_bullet_sprites:
@@ -384,7 +387,9 @@ def main():
                         test_sound.play()
                         # upgrade spawn at random chance
                         if(random.randrange(30) > 25):
-                            Upgrade(enemy.rect.x, enemy.rect.y)
+                            # upgrades are complicated. lets readd later.
+                            # Upgrade(enemy.rect.x, enemy.rect.y)
+                            pass
                     if bullet.health <= 0:  # bullet death
                         p_bullet_sprites.remove(bullet)
                         all_sprites_list.remove(bullet)
@@ -401,11 +406,11 @@ def main():
 
         # if enemies have been destroyed, lets spawn some new ones.
         # TODO: further complicate with level formula/speeds/balance
-        timer = abs(int((fpsClock.get_time() - start_time) / 5))
+        timer = (time.clock() - start_time) / 5
 
         if len(enemy_group) < timer:
             spawn_enemies(2)
-        print("timer: {}".format(timer))
+        print("timer: {}".format(start_time))
         print("Currently {} enemies fielded.".format(len(enemy_group)))
         # update all the things!
         all_sprites_list.update()
