@@ -3,64 +3,25 @@
 just getting started with pygame. writing a simple space shooter.
 Dependancies notes removed -- see ./Dependancies
 
-Gameplay:
-TODO: item/powerup drops: Shield, weapon upgrade, diff ship, lives?
-TODO: add item drop: change of player ship(req weapon reset?)
-TODO: variety of enemy ships(diff ships=diff speeds/bullets)
-TODO: extra lives, and display thereof
-TODO: implement diff patterns for bullets/enemies to follow based on type
-TODO: more predictable enemy spawning algorithm
-TODO: Boss enemies?
-TODO: end of stage, stage transition
-TODO: energy bar for a special weapon(right click?)
-TODO: Track/display high score; local db/file to store
-
-Graphics/sound:
-TODO: animations upon collisions
-TODO: sounds - weapons, ship-ship collision, weapon-ship collision
-TODO: scrolling background, presenting movement/progression
-TODO: boundaries to player ship: prevent moving off-screen to safety?
-
-Controls:
-TODO: keyboard/controller control compatibility
-TODO: autofire functionality has broken click-compatibility.
-
-Menus:
-TODO: Main menu, stage selection
-TODO: PAUSE menu
-TODO: game_over() continue/exit buttons
-TODO: game_over options button
-TODO: options menu: adjust music/sound vols w/ sliders/mute chkbox
-
-Misc:
-TODO: metrics, enemies/s spawned/destroyed, pts/s earned.
-TODO: port to earlier python version(?) for compilation/easier install
-
-
-DONE: S_Picture: implement health pools for enemies, bullets
-DONE: bullet class: add bullet_type, owner(player/enemy), spawn_point
-DONE: extend player_bullet class into general bullet class.
-DONE: autofire functionality when holding button
-DONE: proper enemy size-specific placement # accidentally via collision.
-DONE: make collision system pixel perfect.
-DONE: randomly generate enemies
-DONE: rather than clearing screen on game_over, freezeframe?
-DONE: weapons fire/collision thereof.
-DONE: ships displayed/rendered
-DONE: score displayed
-DONE: death/game over condition
+TODO, features requested/required still to be done, removed to
+./TODO.org
 """
 
+import os
 import pygame
 import sys
 import random
-# import math
 import time
+
 # pygame.init mysteriously crashes on debian when pygame.quit is called.
 # lets use pygame.display instead, and hope that doesn't cause issues.
 pygame.display.init()
 pygame.font.init()   # it caused issues. required for text.
 pygame.mixer.init()  # for sound
+
+# in case we're running the game from a shortcut or remotely or somethin
+# lets cd to the project dir so relative filenames work
+os.chdir(os.path.dirname(__file__))
 
 test_sound_file = './assets/drip.ogg'
 test_sound = pygame.mixer.Sound(test_sound_file)
@@ -77,6 +38,7 @@ GREEN = pygame.Color(0, 255, 0)
 #########################################
 # CLASSES
 #########################################
+
 class S_Picture(pygame.sprite.Sprite):
 
     def __init__(self, image_filename, x, y):
