@@ -39,6 +39,7 @@ GREEN = pygame.Color(0, 255, 0)
 # CLASSES
 #########################################
 
+
 class S_Picture(pygame.sprite.Sprite):
 
     def __init__(self, image_filename, x, y):
@@ -79,12 +80,12 @@ class Player(S_Picture):
 
 class Bullet(S_Picture):
     # TODO: seriously need a better solution here than lambdas.
-    bullet_types = [{'filename' : './assets/player_bullet.png',  # default
+    bullet_types = [{'filename': './assets/player_bullet.png',  # default
                      'formula x': lambda x, s: s,   # horizontal trajectory
                      'formula y': lambda y: y - 8,  # vertical trajectory
                      # degrees for angle transform. 0 = no change.
                      'formula d': lambda d: 0,
-                     'health'   : 1},
+                     'health': 1},
                     # {'filename' : './assets/bullet_2.png',
                     # # lambda current_x, spawn_x
                     # 'formula x': lambda x, s: s + math.sin(x) *
@@ -117,13 +118,14 @@ class Bullet(S_Picture):
         self.health = self.bullet_types[player_sprite.bullet_type]['health']
 
     def update(self):
-        x_formula   = self.bullet_types[self.bullet_type]['formula x']
-        y_formula   = self.bullet_types[self.bullet_type]['formula y']
+        x_formula = self.bullet_types[self.bullet_type]['formula x']
+        y_formula = self.bullet_types[self.bullet_type]['formula y']
         # d = delta for the angle of the bullet
-        d_formula   = self.bullet_types[self.bullet_type]['formula d']
-        self.image  = pygame.transform.rotate(self.origin_img,
-                                              d_formula(self.rect.y))
-        self.rect.x = x_formula(self.rect.y, self.spawn_x) - self.image_width / 2
+        d_formula = self.bullet_types[self.bullet_type]['formula d']
+        self.image = pygame.transform.rotate(self.origin_img,
+                                             d_formula(self.rect.y))
+        self.rect.x = x_formula(
+            self.rect.y, self.spawn_x) - self.image_width / 2
         self.rect.y = y_formula(self.rect.y)
         if self.rect.y < 0:  # destroy sprite if it's out of range.
             p_bullet_sprites.remove(self)
@@ -165,6 +167,7 @@ class Enemy(S_Picture):
                 self.rect.y = self.rect.y - 20
         enemy_group.add(self)
 
+
 class Upgrade(S_Picture):
     image_filename = './assets/upgrade_cir.png'
 
@@ -173,6 +176,7 @@ class Upgrade(S_Picture):
         S_Picture.__init__(self, self.image_filename, x, y)
         all_sprites_list.add(self)
         upgrade_group.add(self)
+
 
 class Bg_Picture(S_Picture):
 
@@ -188,6 +192,7 @@ class Text(pygame.sprite.Sprite):
 
         self.font = pygame.font.SysFont("Arial", size)
         self.textSurf = self.font.render(text, 1, color)
+
 
 ###################################
 # initialize variables
@@ -212,6 +217,7 @@ lvl_one_bg = Bg_Picture('./assets/level one.png')
 ##############################
 # function definitions
 #############################
+
 
 def get_rand_x():  # randomized location for new ships.
     # TODO: this may be more efficient taking into account width of the ship
@@ -268,6 +274,7 @@ def game_over():  # game over screen/menu?
             #    main()
         fpsClock.tick(15)
 
+
 def reset_game():
     global score
     score = 0
@@ -282,6 +289,7 @@ def reset_game():
     for s in upgrade_group:
         upgrade_group.remove(s)
     main()
+
 
 player_sprite = Player(300, 500)
 all_sprites_list = pygame.sprite.Group()
@@ -390,9 +398,11 @@ def main():
         High_score_text = Text("High Score: {}".format(
             high_score)).textSurf  # pep8 pls ;_;
         screen.blit(High_score_text, ((screen_width / 2 -
-                                      High_score_text.get_width() / 2), 5))
+                                       High_score_text.get_width() / 2), 5))
         pygame.display.flip()  # reveal changes
 
         # slow it down, if necessary.
         fpsClock.tick(60)  # we don't need more than 60 fps for this. srsly.
+
+
 main()
