@@ -1,0 +1,54 @@
+* S_Picture:
+** origin_img
+** rect(for collision)
+** rect.x
+** rect.y
+** mask ??
+** frames_alive?
+** image_height
+** image_width
+** health
+* Player(S_Picture)
+** image_filename(ship)
+** bullet_type
+** def spawn_bullet
+* Bullet(S_Picture)
+** bullet_types
+*** each has: 
+**** filename(image)
+**** formula for x trajectory
+**** formula for y trajectory
+**** "formula" for d? wtf is this? "angle" of the bullet? so it spins?
+**** health - is this piercing, or dmg done?
+** spawn_x - spawn location x
+** spawn_y - spawn location y
+** bullet_type which bullet_types is it?
+** hostile - toggles hostile, so you don't eat your own bullets
+** health - health of bullet? again, piercing, or dmg?
+** update: moves bullet according to x, y, d formulae
+*** destroys if out of range
+* Enemy(S_picture)
+** health
+** image_filename
+** v_x, v_y = vector; the x and y movement direction
+** update
+*** currently moves in straight lines via v_x, v_y
+*** calls self.relocate when hits outside of screen
+*** this really needs work.
+** relocate
+*** possible inf loop here
+*** because attemps never has a fail condition FIXME
+*** this looks like it should be done better.
+* Upgrade(S_Picture):
+** image_filename
+* Bg_Picture(S_Picture):
+** image_filename
+* Text(pygame.sprite.Sprite):
+** text, font, size, color, width, height
+** textSurf - font.render object
+* get_rand_x
+* pixel_collision(sprite_a, sprite_b) # collision detection
+* spawn_enemies
+* game_over() - game mover screen/menu
+* reset_game - resets score, start_time, dels game items, starts main()
+* 

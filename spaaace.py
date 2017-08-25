@@ -86,13 +86,13 @@ class Bullet(S_Picture):
                      # degrees for angle transform. 0 = no change.
                      'formula d': lambda d: 0,
                      'health': 1},
-                    # {'filename' : './assets/bullet_2.png',
-                    # # lambda current_x, spawn_x
-                    # 'formula x': lambda x, s: s + math.sin(x) *
-                    # (screen_width / 20),  # pep8 pls ;_;
-                    # 'formula y': lambda y: y - 8,
-                    # 'formula d': lambda d: 0,
-                    # 'health'   : 1},
+                     {'filename' : './assets/bullet_2.png',
+                     lambda current_x, spawn_x
+                     'formula x': lambda x, s: s + math.sin(x) *
+                     (screen_width / 20),  # pep8 pls ;_;
+                     'formula y': lambda y: y - 8,
+                     'formula d': lambda d: 0,
+                     'health'   : 1},
                     # #this one is aweful. gamebreaking aweful.
                     # {'filename' : './assets/wave_bullet.png',
                     #  # lambda current_x, spawn_x
@@ -108,7 +108,7 @@ class Bullet(S_Picture):
     # bullet_type to be referenced for:
     # bullet img file name
     # bullet trajectory formula choice and calculations
-    def __init__(self, x, y, hostile=False, bullet_type=0):
+    def __init__(self, x, y, hostile=False, bullet_type=1):
         self.spawn_x = x
         self.spawn_y = y
         self.bullet_type = bullet_type
@@ -163,6 +163,8 @@ class Enemy(S_Picture):
         while(pygame.sprite.spritecollide(self, enemy_group, False)):
             attempts = attempts + 1
             # prevent inf loop by repositioning in y
+            # FIXME: does this actually prevent inf loop? or just
+            # make a train along the y axis?
             if attempts > 10:
                 self.rect.y = self.rect.y - 20
         enemy_group.add(self)
@@ -188,6 +190,7 @@ class Bg_Picture(S_Picture):
 class Text(pygame.sprite.Sprite):
 
     def __init__(self, text, size=16, color=WHITE, width=40, height=40):
+        # this object doesn't use width or height? FIXME?
         pygame.sprite.Sprite.__init__(self)
 
         self.font = pygame.font.SysFont("Arial", size)
@@ -280,7 +283,7 @@ def reset_game():
     score = 0
     global start_time
     start_time = time.time()
-    for s in all_sprites_list:
+    for s in all_sprites_list: # can i not just purge these lists?
         all_sprites_list.remove(s)
     for s in p_bullet_sprites:
         p_bullet_sprites.remove(s)
