@@ -12,7 +12,7 @@ import pygame
 import sys
 import random
 import time
-
+import math
 # pygame.init mysteriously crashes on debian when pygame.quit is called.
 # lets use pygame.display instead, and hope that doesn't cause issues.
 pygame.display.init()
@@ -133,13 +133,19 @@ class Bullet(S_Picture):
     # bullet_type to be referenced for:
     # bullet img file name
     # bullet trajectory formula choice and calculations
-    def __init__(self, location, hostile=False, behavior=lambda b: b, image_filename='./assets/scary_bubbles.png'):
-        # default behavior is to not move.
+    def __init__(self, location, hostile=False, behavior=None, image_filename='./assets/player_bullet.png'):
+        def default_behavior(self, t: int):
+                x = self.spawn_location[0]
+                y = self.spawn_location[1] - 8*t  # vertical trajectory
+                return (x, y)
+        if behavior is None:
+            behavior = default_behavior
         self.spawn_location = location
         self.hostile = hostile
         self.image_filename = image_filename
         S_Picture.__init__(self, self.image_filename, location)
         self.health = 1 # 
+        self.behavior = behavior
 
     def update(self):
         # x_formula = self.bullet_types[self.bullet_type]['formula x']
@@ -149,7 +155,7 @@ class Bullet(S_Picture):
         #self.image = pygame.transform.rotate(self.origin_img,
         #                                     d_formula(self.rect.y))
         super().update()
-        self.move(self.behavior(self.frames_alive+1))
+        self.move(self.behavior(self, self.frames_alive+1))
         # self.rect.x = x_formula(
         #     self.rect.y, self.spawn_x) - self.image_width / 2
         # self.rect.y = y_formula(self.rect.y)
@@ -252,6 +258,7 @@ def spawn_enemies(quantity):
 
 def spawn_bullet(mouseLocation):
     mouse_x, mouse_y = mouseLocation
+    
     new_bullet = Bullet(
         location=(mouse_x, mouse_y - player_sprite.image_height / 2), hostile=False)
     p_bullet_sprites.add(new_bullet)
