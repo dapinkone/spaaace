@@ -21,7 +21,7 @@ pygame.mixer.init()  # for sound
 
 # in case we're running the game from a shortcut or remotely or somethin
 # lets cd to the project dir so relative filenames work
-os.chdir(os.path.dirname(__file__))
+#os.chdir(os.path.dirname(__file__))
 
 test_sound_file = './assets/drip.ogg'
 test_sound = pygame.mixer.Sound(test_sound_file)
@@ -35,6 +35,31 @@ RED = pygame.Color(255, 0, 0)
 BLACK = pygame.Color(0, 0, 0)
 GREEN = pygame.Color(0, 255, 0)
 
+###################################
+# initialize variables
+##################################
+mouse_x, mouse_y = 0, 0
+score = 0
+high_score = 0
+start_time = time.time()  # tracking how long we've been in-game.
+
+# set_mode(width, height) making the window
+screen = pygame.display.set_mode((640, 960))
+screen_width = screen.get_width()
+screen_height = screen.get_height()
+pygame.display.set_caption('SPAAACE bubbles!')
+
+all_sprites_list = pygame.sprite.Group()
+p_bullet_sprites = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
+
+all_sprites_list = pygame.sprite.Group()
+p_bullet_sprites = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
+upgrade_group = pygame.sprite.Group()
+
+
+
 #########################################
 # CLASSES
 #########################################
@@ -42,15 +67,15 @@ GREEN = pygame.Color(0, 255, 0)
 
 class S_Picture(pygame.sprite.Sprite):
 
-    def __init__(self, image_filename, x, y):
+    def __init__(self, image_filename, location):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load(image_filename).convert_alpha()
         # rotation of images causes deformation.
         # keep origin on file for reference.
         self.origin_img = self.image
         self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
+        self.rect.x = location[0]
+        self.rect.y = location[1]
         self.mask = pygame.mask.from_surface(self.image)
         self.frames_alive = 0
         self.image_height = self.image.get_height()
@@ -58,75 +83,76 @@ class S_Picture(pygame.sprite.Sprite):
         # enemies, player, bullets, etc. they all need health pools.
         self.health = 4
 
+    def move(self, location):
+        self.rect.x = location[0]
+        self.rect.y = location[1]
+
     def update(self):
-        self.frames_alive = self.frames_alive + 1
+        self.frames_alive += 1
 
 
 class Player(S_Picture):
 
-    def __init__(self, x, y):
-        S_Picture.__init__(self, self.image_filename, x, y)
+    def __init__(self, location):
+        S_Picture.__init__(self, self.image_filename, location)
     image_filename = './assets/SpaceShip.png'
     bullet_type = 0  # default type....this seems cryptic. #TODO #FIXME
 
-    def spawn_bullet(self, mouse_x, mouse_y):
-        new_bullet = Bullet(mouse_x,
-                            mouse_y - player_sprite.image_height / 2,
-                            False,
-                            player_sprite.bullet_type)
-        p_bullet_sprites.add(new_bullet)
-        all_sprites_list.add(new_bullet)
+
+
+player_sprite = Player((300, 500))
 
 
 class Bullet(S_Picture):
     # TODO: seriously need a better solution here than lambdas.
-    bullet_types = [{'filename': './assets/player_bullet.png',  # default
-                     'formula x': lambda x, s: s,   # horizontal trajectory
-                     'formula y': lambda y: y - 8,  # vertical trajectory
-                     # degrees for angle transform. 0 = no change.
-                     'formula d': lambda d: 0,
-                     'health': 1},
-                     {'filename' : './assets/bullet_2.png',
-                     lambda current_x, spawn_x
-                     'formula x': lambda x, s: s + math.sin(x) *
-                     (screen_width / 20),  # pep8 pls ;_;
-                     'formula y': lambda y: y - 8,
-                     'formula d': lambda d: 0,
-                     'health'   : 1},
-                    # #this one is aweful. gamebreaking aweful.
-                    # {'filename' : './assets/wave_bullet.png',
-                    #  # lambda current_x, spawn_x
-                    #  'formula x': lambda x, s: s + math.sin(x) *
-                    #  (screen_width / 20),  # pep8 pls ;_;
-                    #  'formula y': lambda y: y - 8,
-                    #  'formula d': lambda d: 0,
-                    #  'health'   : 3}
-                    ]
+    # bullet_types = [{'filename': './assets/player_bullet.png',  # default
+    #                  'formula x': lambda x, s: s,   # horizontal trajectory
+    #                  'formula y': lambda y: y - 8,  # vertical trajectory
+    #                  # degrees for angle transform. 0 = no change.
+    #                  'formula d': lambda d: 0,
+    #                  'health': 1},
+    #                  {'filename' : './assets/bullet_2.png',
+    #                  lambda current_x, spawn_x
+    #                  'formula x': lambda x, s: s + math.sin(x) *
+    #                  (screen_width / 20),  # pep8 pls ;_;
+    #                  'formula y': lambda y: y - 8,
+    #                  'formula d': lambda d: 0,
+    #                  'health'   : 1},
+    #                 # #this one is aweful. gamebreaking aweful.
+    #                 # {'filename' : './assets/wave_bullet.png',
+    #                 #  # lambda current_x, spawn_x
+    #                 #  'formula x': lambda x, s: s + math.sin(x) *
+    #                 #  (screen_width / 20),  # pep8 pls ;_;
+    #                 #  'formula y': lambda y: y - 8,
+    #                 #  'formula d': lambda d: 0,
+    #                 #  'health'   : 3}
+    #                 ]
 
     # x, y for initial spawn location
     # hostile to be True or False. hostile = dmg to player.
     # bullet_type to be referenced for:
     # bullet img file name
     # bullet trajectory formula choice and calculations
-    def __init__(self, x, y, hostile=False, bullet_type=1):
-        self.spawn_x = x
-        self.spawn_y = y
-        self.bullet_type = bullet_type
+    def __init__(self, location, hostile=False, behavior=lambda b: b, image_filename='./assets/scary_bubbles.png'):
+        # default behavior is to not move.
+        self.spawn_location = location
         self.hostile = hostile
-        self.image_filename = self.bullet_types[bullet_type]['filename']
-        S_Picture.__init__(self, self.image_filename, x, y)
-        self.health = self.bullet_types[player_sprite.bullet_type]['health']
+        self.image_filename = image_filename
+        S_Picture.__init__(self, self.image_filename, location)
+        self.health = 1 # 
 
     def update(self):
-        x_formula = self.bullet_types[self.bullet_type]['formula x']
-        y_formula = self.bullet_types[self.bullet_type]['formula y']
+        # x_formula = self.bullet_types[self.bullet_type]['formula x']
+        # y_formula = self.bullet_types[self.bullet_type]['formula y']
         # d = delta for the angle of the bullet
-        d_formula = self.bullet_types[self.bullet_type]['formula d']
-        self.image = pygame.transform.rotate(self.origin_img,
-                                             d_formula(self.rect.y))
-        self.rect.x = x_formula(
-            self.rect.y, self.spawn_x) - self.image_width / 2
-        self.rect.y = y_formula(self.rect.y)
+        # d_formula = self.bullet_types[self.bullet_type]['formula d']
+        #self.image = pygame.transform.rotate(self.origin_img,
+        #                                     d_formula(self.rect.y))
+        super().update()
+        self.move(self.behavior(self.frames_alive+1))
+        # self.rect.x = x_formula(
+        #     self.rect.y, self.spawn_x) - self.image_width / 2
+        # self.rect.y = y_formula(self.rect.y)
         if self.rect.y < 0:  # destroy sprite if it's out of range.
             p_bullet_sprites.remove(self)
             all_sprites_list.remove(self)
@@ -134,8 +160,8 @@ class Bullet(S_Picture):
 
 class Enemy(S_Picture):
 
-    def __init__(self, x=300, y=0, vector=(0, 1)):
-        S_Picture.__init__(self, self.image_filename, x, y)
+    def __init__(self, location, vector=(0, 1)):
+        S_Picture.__init__(self, self.image_filename, location)
         self.v_x, self.v_y = vector
         self.relocate()  # find a good initial position.
         self.health = 2
@@ -184,7 +210,7 @@ class Bg_Picture(S_Picture):
 
     def __init__(self, image_filename):
         self.image_filename = image_filename
-        S_Picture.__init__(self, self.image_filename, 0, -1782 + screen_height)
+        S_Picture.__init__(self, self.image_filename, (0, -1782 + screen_height))
 
 
 class Text(pygame.sprite.Sprite):
@@ -197,23 +223,6 @@ class Text(pygame.sprite.Sprite):
         self.textSurf = self.font.render(text, 1, color)
 
 
-###################################
-# initialize variables
-##################################
-mouse_x, mouse_y = 0, 0
-score = 0
-high_score = 0
-start_time = time.time()  # tracking how long we've been in-game.
-
-# set_mode(width, height) making the window
-screen = pygame.display.set_mode((640, 960))
-screen_width = screen.get_width()
-screen_height = screen.get_height()
-pygame.display.set_caption('SPAAACE bubbles!')
-
-all_sprites_list = pygame.sprite.Group()
-p_bullet_sprites = pygame.sprite.Group()
-enemy_group = pygame.sprite.Group()
 
 lvl_one_bg = Bg_Picture('./assets/level one.png')
 
@@ -239,8 +248,14 @@ def pixel_collision(sprite_a, sprite_b):  # pixel perfect collision
 
 def spawn_enemies(quantity):
     for x in range(quantity):
-        Enemy(0, screen_height / 2, (random.randint(-1, 1), 1))
+        Enemy(location=(0, screen_height / 2), vector=(random.randint(-1, 1), 1))
 
+def spawn_bullet(mouseLocation):
+    mouse_x, mouse_y = mouseLocation
+    new_bullet = Bullet(
+        location=(mouse_x, mouse_y - player_sprite.image_height / 2), hostile=False)
+    p_bullet_sprites.add(new_bullet)
+    all_sprites_list.add(new_bullet)
 
 def game_over():  # game over screen/menu?
     pygame.mouse.set_visible(True)
@@ -294,11 +309,7 @@ def reset_game():
     main()
 
 
-player_sprite = Player(300, 500)
-all_sprites_list = pygame.sprite.Group()
-p_bullet_sprites = pygame.sprite.Group()
-enemy_group = pygame.sprite.Group()
-upgrade_group = pygame.sprite.Group()
+
 # spawn_enemies(10)
 
 
@@ -329,7 +340,8 @@ def main():
         if mouse_button_pressed is True:  # auto fire
             if bullet_timer == 0:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
-                player_sprite.spawn_bullet(mouse_x, mouse_y)
+                # FIXME: should be a spawn_sprite(location) method.
+                spawn_bullet((mouse_x, mouse_y))
                 bullet_timer = bullet_delay
             else:
                 bullet_timer = bullet_timer - 1
