@@ -74,14 +74,13 @@ class S_Picture(pygame.sprite.Sprite):
         # keep origin on file for reference.
         self.origin_img = self.image
         self.rect = self.image.get_rect()
-        self.rect.x = location[0]
-        self.rect.y = location[1]
+        self.move(location)
         self.mask = pygame.mask.from_surface(self.image)
         self.frames_alive = 0
         self.image_height = self.image.get_height()
         self.image_width = self.image.get_width()
         # enemies, player, bullets, etc. they all need health pools.
-        self.health = 4
+        self.health = 1
 
     def move(self, location):
         self.rect.x = location[0]
@@ -94,7 +93,7 @@ class S_Picture(pygame.sprite.Sprite):
 class Player(S_Picture):
 
     def __init__(self, location):
-        S_Picture.__init__(self, self.image_filename, location)
+        super().__init__(self.image_filename, location)
     image_filename = './assets/SpaceShip.png'
     bullet_type = 0  # default type....this seems cryptic. #TODO #FIXME
 
@@ -104,36 +103,9 @@ player_sprite = Player((300, 500))
 
 
 class Bullet(S_Picture):
-    # TODO: seriously need a better solution here than lambdas.
-    # bullet_types = [{'filename': './assets/player_bullet.png',  # default
-    #                  'formula x': lambda x, s: s,   # horizontal trajectory
-    #                  'formula y': lambda y: y - 8,  # vertical trajectory
-    #                  # degrees for angle transform. 0 = no change.
-    #                  'formula d': lambda d: 0,
-    #                  'health': 1},
-    #                  {'filename' : './assets/bullet_2.png',
-    #                  lambda current_x, spawn_x
-    #                  'formula x': lambda x, s: s + math.sin(x) *
-    #                  (screen_width / 20),  # pep8 pls ;_;
-    #                  'formula y': lambda y: y - 8,
-    #                  'formula d': lambda d: 0,
-    #                  'health'   : 1},
-    #                 # #this one is aweful. gamebreaking aweful.
-    #                 # {'filename' : './assets/wave_bullet.png',
-    #                 #  # lambda current_x, spawn_x
-    #                 #  'formula x': lambda x, s: s + math.sin(x) *
-    #                 #  (screen_width / 20),  # pep8 pls ;_;
-    #                 #  'formula y': lambda y: y - 8,
-    #                 #  'formula d': lambda d: 0,
-    #                 #  'health'   : 3}
-    #                 ]
 
-    # x, y for initial spawn location
-    # hostile to be True or False. hostile = dmg to player.
-    # bullet_type to be referenced for:
-    # bullet img file name
-    # bullet trajectory formula choice and calculations
     def __init__(self, location, hostile=False, behavior=None, image_filename='./assets/player_bullet.png'):
+        super().__init__(image_filename, location)
         def default_behavior(self, t: int):
                 x = self.spawn_location[0]
                 y = self.spawn_location[1] - 8*t  # vertical trajectory
@@ -148,34 +120,27 @@ class Bullet(S_Picture):
         self.behavior = behavior
 
     def update(self):
-        # x_formula = self.bullet_types[self.bullet_type]['formula x']
-        # y_formula = self.bullet_types[self.bullet_type]['formula y']
-        # d = delta for the angle of the bullet
-        # d_formula = self.bullet_types[self.bullet_type]['formula d']
-        #self.image = pygame.transform.rotate(self.origin_img,
-        #                                     d_formula(self.rect.y))
         super().update()
-        self.move(self.behavior(self, self.frames_alive+1))
-        # self.rect.x = x_formula(
-        #     self.rect.y, self.spawn_x) - self.image_width / 2
-        # self.rect.y = y_formula(self.rect.y)
+        self.move(self.behavior(self, self.frames_alive))
         if self.rect.y < 0:  # destroy sprite if it's out of range.
             p_bullet_sprites.remove(self)
             all_sprites_list.remove(self)
 
 
 class Enemy(S_Picture):
+    image_filename = './assets/scary_bubbles.png'
 
     def __init__(self, location, vector=(0, 1)):
         S_Picture.__init__(self, self.image_filename, location)
         self.v_x, self.v_y = vector
         self.relocate()  # find a good initial position.
-        self.health = 2
+        self.health = 1
         enemy_group.add(self)
         all_sprites_list.add(self)
-    image_filename = './assets/scary_bubbles.png'
+
 
     def update(self):
+        super().update()
         self.rect.y = self.rect.y + self.v_y
         self.rect.x = self.rect.x + self.v_x
         if self.rect.y > screen_height:
