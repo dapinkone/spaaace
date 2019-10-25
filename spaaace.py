@@ -266,14 +266,10 @@ def reset_game():
     score = 0
     global start_time
     start_time = time.time()
-    for s in all_sprites_list: # can i not just purge these lists?
-        all_sprites_list.remove(s)
-    for s in p_bullet_sprites:
-        p_bullet_sprites.remove(s)
-    for s in enemy_group:
-        enemy_group.remove(s)
-    for s in upgrade_group:
-        upgrade_group.remove(s)
+    all_sprites_list.remove(all_sprites_list)
+    p_bullet_sprites.remove(p_bullet_sprites)
+    enemy_group.remove(enemy_group)
+    upgrade_group.remove(upgrade_group)
     main()
 
 
