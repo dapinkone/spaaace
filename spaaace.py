@@ -44,7 +44,8 @@ high_score = 0
 start_time = time.time()  # tracking how long we've been in-game.
 
 # set_mode(width, height) making the window
-screen = pygame.display.set_mode((640, 960))
+screen = pygame.display.set_mode((1920, 960))
+pygame.display.toggle_fullscreen()
 screen_width = screen.get_width()
 screen_height = screen.get_height()
 pygame.display.set_caption('SPAAACE bubbles!')
@@ -104,9 +105,10 @@ player_sprite = Player((300, 500))
 
 class Bullet(S_Picture):
 
-    def __init__(self, location, hostile=False, behavior=None, image_filename='./assets/player_bullet.png'):
+    def __init__(self, location, hostile=False, behavior=None,
+                 image_filename='./assets/player_bullet.png'):
         super().__init__(image_filename, location)
-        def default_behavior(self, t: int):
+        def default_behavior(self, t):
                 x = self.spawn_location[0]
                 y = self.spawn_location[1] - 8*t  # vertical trajectory
                 return (x, y)
@@ -115,8 +117,7 @@ class Bullet(S_Picture):
         self.spawn_location = location
         self.hostile = hostile
         self.image_filename = image_filename
-        S_Picture.__init__(self, self.image_filename, location)
-        self.health = 1 # 
+        self.health = 1 #
         self.behavior = behavior
 
     def update(self):
@@ -223,7 +224,7 @@ def spawn_enemies(quantity):
 
 def spawn_bullet(mouseLocation):
     mouse_x, mouse_y = mouseLocation
-    
+
     new_bullet = Bullet(
         location=(mouse_x, mouse_y - player_sprite.image_height / 2), hostile=False)
     p_bullet_sprites.add(new_bullet)
@@ -371,7 +372,9 @@ def main():
         all_sprites_list.update()
 
         # paint bg, clear the field.
-        pygame.sprite.Group(lvl_one_bg).draw(screen)
+        screen.fill((0,0,0))
+        # TODO: need a better background.
+        # pygame.sprite.Group(lvl_one_bg).draw(screen)
         # draw all the things!
         all_sprites_list.draw(screen)
         screen.blit(Text("Score: {}".format(score)).textSurf, (20, 5))
