@@ -136,13 +136,14 @@ class Enemy(S_Picture):
         self.v_x, self.v_y = vector
         self.relocate()  # find a good initial position.
         self.health = 1
+        self.scale = 1
         enemy_group.add(self)
         all_sprites_list.add(self)
 
 
     def update(self):
         super().update()
-        self.rect.y = self.rect.y + self.v_y
+        self.rect.y = self.rect.y + self.v_y # TODO: varied behavior?
         self.rect.x = self.rect.x + self.v_x
         if self.rect.y > screen_height:
             self.rect.y = 0
@@ -156,7 +157,7 @@ class Enemy(S_Picture):
         attempts = 0
         # keep trying to find a free spot. give it a few tries.
         enemy_group.remove(self)  # if it already exists = inf collision
-        self.rect.x = get_rand_x()
+        self.rect.x = random.randrange(0, screen_width - 60)
         self.rect.y = 0
         while(pygame.sprite.spritecollide(self, enemy_group, False)):
             attempts = attempts + 1
@@ -201,12 +202,6 @@ lvl_one_bg = Bg_Picture('./assets/level one.png')
 ##############################
 # function definitions
 #############################
-
-
-def get_rand_x():  # randomized location for new ships.
-    # TODO: this may be more efficient taking into account width of the ship
-    return(random.randrange(0, screen_width - 60))
-
 
 def pixel_collision(sprite_a, sprite_b):  # pixel perfect collision
     rect_a = sprite_a.rect
