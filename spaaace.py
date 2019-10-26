@@ -58,9 +58,9 @@ screen_height = screen.get_height()
 pygame.display.set_caption('SPAAACE bubbles!')
 
 all_sprites_list = pygame.sprite.Group()
-p_bullet_sprites = pygame.sprite.Group()
-enemy_group = pygame.sprite.Group()
-upgrade_group = pygame.sprite.Group()
+#p_bullet_sprites = pygame.sprite.Group()
+#enemy_group = pygame.sprite.Group()
+#upgrade_group = pygame.sprite.Group()
 
 
 
@@ -94,6 +94,12 @@ class S_Picture(pygame.sprite.Sprite):
     def update(self):
         self.frames_alive += 1
 
+    def spawn_bullet(self):
+        new_bullet = Bullet(
+            location=(self.rect.x + self.image_width/2, self.rect.y),
+            hostile=self.hostile)
+        all_sprites_list.add(new_bullet)
+
 
 class Player(S_Picture):
 
@@ -126,8 +132,8 @@ class Bullet(S_Picture):
     def update(self):
         super().update()
         self.move(self.behavior(self, self.frames_alive))
-        if self.rect.y < 0:  # destroy sprite if it's out of range.
-            p_bullet_sprites.remove(self)
+         # destroy sprite if it's out of range.
+        if self.rect.y < 0:
             all_sprites_list.remove(self)
 
 
@@ -139,7 +145,6 @@ class Enemy(S_Picture):
         self.v_x, self.v_y = vector
         self.relocate()  # find a good initial position.
         self.health = 1
-        enemy_group.add(self)
         all_sprites_list.add(self)
 
 
@@ -155,32 +160,33 @@ class Enemy(S_Picture):
         if self.rect.x < 0 - self.image_width:
             self.rect.x = screen_width
 
-
+        if self.frames_alive % 10 == 0: # bullet every 10 frames.
+            self.spawn_bullet()
 
     def relocate(self):
         attempts = 0
         # keep trying to find a free spot. give it a few tries.
-        enemy_group.remove(self)  # if it already exists = inf collision
+        all_sprites_list.remove(self)  # if it already exists = inf collision
         self.rect.x = random.randrange(0, screen_width - 60)
         self.rect.y = 0
-        while(pygame.sprite.spritecollide(self, enemy_group, False)):
+        while(pygame.sprite.spritecollide(self, all_sprites_list, False)):
             attempts = attempts + 1
             # prevent inf loop by repositioning in y
             # FIXME: does this actually prevent inf loop? or just
             # make a train along the y axis?
             if attempts > 10:
                 self.rect.y = self.rect.y - 20
-        enemy_group.add(self)
-
-
-class Upgrade(S_Picture):
-    image_filename = './assets/upgrade_cir.png'
-
-    def __init__(self, x, y):
-        self.upgrade_type = 0  # TODO: diff types of upgrade
-        S_Picture.__init__(self, self.image_filename, x, y)
         all_sprites_list.add(self)
-        upgrade_group.add(self)
+
+
+# class Upgrade(S_Picture):
+#     image_filename = './assets/upgrade_cir.png'
+
+#     def __init__(self, x, y):
+#         self.upgrade_type = 0  # TODO: diff types of upgrade
+#         S_Picture.__init__(self, self.image_filename, x, y)
+#         all_sprites_list.add(self)
+#         upgrade_group.add(self)
 
 
 class Text(pygame.sprite.Sprite):
@@ -201,6 +207,11 @@ class Text(pygame.sprite.Sprite):
 #############################
 
 def pixel_collision(sprite_a, sprite_b):  # pixel perfect collision
+    if sprite_a.hostile == sprite_b.hostile:
+        #TODO: exception/handling for upgrades here.
+        # they're on the same team dont' worry about it.
+        return False
+
     rect_a = sprite_a.rect
     rect_b = sprite_b.rect
     offset_x, offset_y = (rect_b.left - rect_a.left), (rect_b.top - rect_a.top)
@@ -214,13 +225,6 @@ def spawn_enemies(quantity):
     for x in range(quantity):
         Enemy(location=(0, screen_height / 2), vector=(random.randint(-1, 1), 1))
 
-def spawn_bullet(mouseLocation):
-    mouse_x, mouse_y = mouseLocation
-
-    new_bullet = Bullet(
-        location=(mouse_x, mouse_y - player_sprite.image_height / 2), hostile=False)
-    p_bullet_sprites.add(new_bullet)
-    all_sprites_list.add(new_bullet)
 
 def game_over():  # game over screen/menu?
     pygame.mouse.set_visible(True)
@@ -264,9 +268,9 @@ def reset_game():
     global start_time
     start_time = time.time()
     all_sprites_list.remove(all_sprites_list)
-    p_bullet_sprites.remove(p_bullet_sprites)
-    enemy_group.remove(enemy_group)
-    upgrade_group.remove(upgrade_group)
+   # p_bullet_sprites.remove(p_bullet_sprites)
+   # enemy_group.remove(enemy_group)
+   # upgrade_group.remove(upgrade_group)
     main()
 
 
@@ -291,8 +295,9 @@ def main():
             elif event.type == pygame.MOUSEMOTION:
                 x, y = pygame.mouse.get_pos()
                 # put center of ship on mouse, not corner of picture.
-                player_sprite.rect.x = x - player_sprite.image_width / 2
-                player_sprite.rect.y = y - player_sprite.image_height / 2
+                player_sprite.move(
+                    (x - player_sprite.image_width / 2,
+                     y + player_sprite.image_height / 2))
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_button_pressed = True
@@ -302,57 +307,54 @@ def main():
             if bullet_timer == 0:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
                 # FIXME: should be a spawn_sprite(location) method.
-                spawn_bullet((mouse_x, mouse_y))
+                player_sprite.spawn_bullet()
                 bullet_timer = bullet_delay
             else:
                 bullet_timer = bullet_timer - 1
 
-        # pixel perfect collision player v enemy
-        for sprite in enemy_group:
-            if(pixel_collision(sprite, player_sprite)):
-                # this is where the health bar comes in?
-                game_over()
+        if player_sprite.health <= 0:
+            game_over()
 
-        # collision enemy vs bullets
-        for bullet in p_bullet_sprites:
-            for enemy in enemy_group:
-                if(pixel_collision(bullet, enemy)):
+        # collision enemy vs sprite_as
+        for sprite_a in all_sprites_list:
+            for sprite_b in all_sprites_list:
+                if(pixel_collision(sprite_a, sprite_b)):
                     # deal damage to both parties.
-                    temp = enemy.health
-                    enemy.health = enemy.health - bullet.health
-                    bullet.health = bullet.health - temp
+                    temp = sprite_b.health
+                    sprite_b.health = sprite_b.health - sprite_a.health
+                    sprite_a.health = sprite_a.health - temp
                     # parsing out the consequences.
-                    if enemy.health <= 0:  # enemy death
-                        enemy_group.remove(enemy)
-                        all_sprites_list.remove(enemy)
+                    if sprite_b.health <= 0:  # sprite_b death
+                        all_sprites_list.remove(sprite_b)
                         global score
                         score = score + 1
                         test_sound.play()
                         # upgrade spawn at random chance
-                        if(random.randrange(30) > 25):
+                        #if(random.randrange(30) > 25):
                             # upgrades are complicated. lets readd later.
-                            # Upgrade(enemy.rect.x, enemy.rect.y)
-                            pass
-                    if bullet.health <= 0:  # bullet death
-                        p_bullet_sprites.remove(bullet)
-                        all_sprites_list.remove(bullet)
+                            # Upgrade(sprite_b.rect.x, sprite_b.rect.y)
+                        #    pass
+                    if sprite_a.health <= 0:  # sprite_a death
+                        all_sprites_list.remove(sprite_a)
             # TODO: add sound/animation?
 
         # collision player v upgrades
-        for upgrade in upgrade_group:
-            if(pixel_collision(player_sprite, upgrade)):
-                upgrade_group.remove(upgrade)
-                all_sprites_list.remove(upgrade)
-                # player_sprite.bullet_type + 1
-                if player_sprite.bullet_type < 2:
-                    player_sprite.bullet_type = player_sprite.bullet_type + 1
+#        for upgrade in upgrade_group:
+#            if(pixel_collision(player_sprite, upgrade)):
+#                upgrade_group.remove(upgrade)
+#                all_sprites_list.remove(upgrade)
+#                # player_sprite.bullet_type + 1
+#                if player_sprite.bullet_type < 2:
+#                    player_sprite.bullet_type = player_sprite.bullet_type + 1
 
         # if enemies have been destroyed, lets spawn some new ones.
         # TODO: further complicate with level formula/speeds/balance
         timer = int(time.time() - start_time)
 
-        if len(enemy_group) < timer + 1 / (1 + sum(range(1, timer))):
-            spawn_enemies(2)
+        ## TODO: what does this formula even do?
+        #if len(all_sprites_list) < timer + 1 / (1 + sum(range(1, timer))):
+        if timer % 3600 == 0:
+                spawn_enemies(1)
         # print("timer: {} {}".format(start_time, timer))
         # print("Currently {} enemies fielded.".format(len(enemy_group)))
         # print("all sprites:  {}".format(len(all_sprites_list)))
