@@ -57,6 +57,7 @@ screen_height = screen.get_height()
 pygame.display.set_caption("SPAAACE bubbles!")
 
 all_sprites_list = pygame.sprite.Group()
+enemy_counter = 0
 
 #########################################
 # CLASSES
@@ -156,6 +157,8 @@ class Enemy(S_Picture):
         self.v_x, self.v_y = vector
         self.relocate()  # find a good initial position.
         self.health = 1
+        global enemy_counter
+        enemy_counter += 1
         all_sprites_list.add(self)
 
     def update(self):
@@ -177,8 +180,7 @@ class Enemy(S_Picture):
         attempts = 0
         # keep trying to find a free spot. give it a few tries.
         all_sprites_list.remove(self)  # if it already exists = inf collision
-        self.rect.x = random.randrange(0, screen_width - 60)
-        self.rect.y = 0
+        self.move((random.randrange(0, screen_width - 60),  0))
         #while pygame.sprite.spritecollide(self, all_sprites_list, False):
         #    attempts = attempts + 1
             # prevent inf loop by repositioning in y
@@ -326,7 +328,7 @@ def main():
 
         ## TODO: what does this formula even do?
         # if len(all_sprites_list) < timer + 1 / (1 + sum(range(1, timer))):
-        if timer % 3600 == 0:
+        if timer % 3600 == 0 and enemy_counter < 20:
             spawn_enemies(1)
         # update all the things!
         all_sprites_list.update()
