@@ -14,23 +14,22 @@ import random
 import time
 import math
 
-if not (sys.version.startswith('3.')):
+if not (sys.version.startswith("3.")):
     print("Error: Python 3 required. Python 2 is not supported.")
     quit()
-
 
 
 # pygame.init mysteriously crashes on debian when pygame.quit is called.
 # lets use pygame.display instead, and hope that doesn't cause issues.
 pygame.display.init()
-pygame.font.init()   # it caused issues. required for text.
+pygame.font.init()  # it caused issues. required for text.
 pygame.mixer.init()  # for sound
 
 # in case we're running the game from a shortcut or remotely or somethin
 # lets cd to the project dir so relative filenames work
-#os.chdir(os.path.dirname(__file__))
+# os.chdir(os.path.dirname(__file__))
 
-test_sound_file = './assets/drip.ogg'
+test_sound_file = "./assets/drip.ogg"
 test_sound = pygame.mixer.Sound(test_sound_file)
 
 fpsClock = pygame.time.Clock()  # allow limiting FPS
@@ -55,13 +54,12 @@ screen = pygame.display.set_mode((1920, 960))
 pygame.display.toggle_fullscreen()
 screen_width = screen.get_width()
 screen_height = screen.get_height()
-pygame.display.set_caption('SPAAACE bubbles!')
+pygame.display.set_caption("SPAAACE bubbles!")
 
 all_sprites_list = pygame.sprite.Group()
-#p_bullet_sprites = pygame.sprite.Group()
-#enemy_group = pygame.sprite.Group()
-#upgrade_group = pygame.sprite.Group()
-
+# p_bullet_sprites = pygame.sprite.Group()
+# enemy_group = pygame.sprite.Group()
+# upgrade_group = pygame.sprite.Group()
 
 
 #########################################
@@ -70,7 +68,6 @@ all_sprites_list = pygame.sprite.Group()
 
 
 class S_Picture(pygame.sprite.Sprite):
-
     def __init__(self, image_filename, location, hostile=True):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load(image_filename).convert_alpha()
@@ -96,49 +93,57 @@ class S_Picture(pygame.sprite.Sprite):
 
     def spawn_bullet(self):
         new_bullet = Bullet(
-            location=(self.rect.x + self.image_width/2, self.rect.y),
-            hostile=self.hostile)
+            location=(self.rect.x + self.image_width / 2, self.rect.y),
+            hostile=self.hostile,
+        )
         all_sprites_list.add(new_bullet)
 
 
 class Player(S_Picture):
-
     def __init__(self, location):
         super().__init__(self.image_filename, location)
         self.hostile = False
-    image_filename = './assets/SpaceShip.png'
+
+    image_filename = "./assets/SpaceShip.png"
     bullet_type = 0  # default type....this seems cryptic. #TODO #FIXME
+
 
 player_sprite = Player((300, 500))
 
 
 class Bullet(S_Picture):
-
-    def __init__(self, location, hostile=False, behavior=None,
-                 image_filename='./assets/player_bullet.png'):
+    def __init__(
+        self,
+        location,
+        hostile=False,
+        behavior=None,
+        image_filename="./assets/player_bullet.png",
+    ):
         super().__init__(image_filename, location)
+
         def default_behavior(self, t):
-                x = self.spawn_location[0]
-                y = self.spawn_location[1] - 8*t  # vertical trajectory
-                return (x, y)
+            x = self.spawn_location[0]
+            y = self.spawn_location[1] - 8 * t  # vertical trajectory
+            return (x, y)
+
         if behavior is None:
             behavior = default_behavior
         self.spawn_location = location
         self.hostile = hostile
         self.image_filename = image_filename
-        self.health = 1 #
+        self.health = 1  #
         self.behavior = behavior
 
     def update(self):
         super().update()
         self.move(self.behavior(self, self.frames_alive))
-         # destroy sprite if it's out of range.
+        # destroy sprite if it's out of range.
         if self.rect.y < 0:
             all_sprites_list.remove(self)
 
 
 class Enemy(S_Picture):
-    image_filename = './assets/scary_bubbles.png'
+    image_filename = "./assets/scary_bubbles.png"
 
     def __init__(self, location, vector=(0, 1)):
         S_Picture.__init__(self, self.image_filename, location)
@@ -147,10 +152,9 @@ class Enemy(S_Picture):
         self.health = 1
         all_sprites_list.add(self)
 
-
     def update(self):
         super().update()
-        self.rect.y = self.rect.y + self.v_y # TODO: varied behavior?
+        self.rect.y = self.rect.y + self.v_y  # TODO: varied behavior?
         self.rect.x = self.rect.x + self.v_x
         if self.rect.y > screen_height:
             self.rect.y = 0
@@ -160,7 +164,7 @@ class Enemy(S_Picture):
         if self.rect.x < 0 - self.image_width:
             self.rect.x = screen_width
 
-        if self.frames_alive % 10 == 0: # bullet every 10 frames.
+        if self.frames_alive % 10 == 0:  # bullet every 10 frames.
             self.spawn_bullet()
 
     def relocate(self):
@@ -169,7 +173,7 @@ class Enemy(S_Picture):
         all_sprites_list.remove(self)  # if it already exists = inf collision
         self.rect.x = random.randrange(0, screen_width - 60)
         self.rect.y = 0
-        while(pygame.sprite.spritecollide(self, all_sprites_list, False)):
+        while pygame.sprite.spritecollide(self, all_sprites_list, False):
             attempts = attempts + 1
             # prevent inf loop by repositioning in y
             # FIXME: does this actually prevent inf loop? or just
@@ -178,8 +182,8 @@ class Enemy(S_Picture):
                 self.rect.y = self.rect.y - 20
         all_sprites_list.add(self)
 
-class Text(pygame.sprite.Sprite):
 
+class Text(pygame.sprite.Sprite):
     def __init__(self, text, size=16, color=WHITE, width=40, height=40):
         # this object doesn't use width or height? FIXME?
         pygame.sprite.Sprite.__init__(self)
@@ -187,20 +191,22 @@ class Text(pygame.sprite.Sprite):
         self.font = pygame.font.SysFont("Arial", size)
         self.textSurf = self.font.render(text, 1, color)
 
+
 ##############################
 # function definitions
 #############################
 
+
 def pixel_collision(sprite_a, sprite_b):  # pixel perfect collision
     if sprite_a.hostile == sprite_b.hostile:
-        #TODO: exception/handling for upgrades here.
+        # TODO: exception/handling for upgrades here.
         # they're on the same team dont' worry about it.
         return False
 
     rect_a = sprite_a.rect
     rect_b = sprite_b.rect
     offset_x, offset_y = (rect_b.left - rect_a.left), (rect_b.top - rect_a.top)
-    if(sprite_a.mask.overlap(sprite_b.mask, (offset_x, offset_y)) is not None):
+    if sprite_a.mask.overlap(sprite_b.mask, (offset_x, offset_y)) is not None:
         return True
     else:
         return False
@@ -250,6 +256,7 @@ def reset_game():
     all_sprites_list.remove(all_sprites_list)
     main()
 
+
 def main():
     pygame.mouse.set_visible(False)
     all_sprites_list.add(player_sprite)
@@ -268,8 +275,11 @@ def main():
                 x, y = pygame.mouse.get_pos()
                 # put center of ship on mouse, not corner of picture.
                 player_sprite.move(
-                    (x - player_sprite.image_width / 2,
-                     y + player_sprite.image_height / 2))
+                    (
+                        x - player_sprite.image_width / 2,
+                        y + player_sprite.image_height / 2,
+                    )
+                )
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_button_pressed = True
@@ -290,7 +300,7 @@ def main():
         # collision enemy vs sprite_as
         for sprite_a in all_sprites_list:
             for sprite_b in all_sprites_list:
-                if(pixel_collision(sprite_a, sprite_b)):
+                if pixel_collision(sprite_a, sprite_b):
                     # deal damage to both parties.
                     temp = sprite_b.health
                     sprite_b.health = sprite_b.health - sprite_a.health
@@ -309,14 +319,14 @@ def main():
         timer = int(time.time() - start_time)
 
         ## TODO: what does this formula even do?
-        #if len(all_sprites_list) < timer + 1 / (1 + sum(range(1, timer))):
+        # if len(all_sprites_list) < timer + 1 / (1 + sum(range(1, timer))):
         if timer % 3600 == 0:
-                spawn_enemies(1)
+            spawn_enemies(1)
         # update all the things!
         all_sprites_list.update()
 
         # paint bg, clear the field.
-        screen.fill((0,0,0))
+        screen.fill((0, 0, 0))
         # TODO: need a better background.
         # draw all the things!
         all_sprites_list.draw(screen)
@@ -328,10 +338,12 @@ def main():
         if high_score <= score:
             high_score = score
 
-        High_score_text = Text("High Score: {}".format(
-            high_score)).textSurf  # pep8 pls ;_;
-        screen.blit(High_score_text, ((screen_width / 2 -
-                                       High_score_text.get_width() / 2), 5))
+        High_score_text = Text(
+            "High Score: {}".format(high_score)
+        ).textSurf  # pep8 pls ;_;
+        screen.blit(
+            High_score_text, ((screen_width / 2 - High_score_text.get_width() / 2), 5)
+        )
         pygame.display.flip()  # reveal changes
 
         # slow it down, if necessary.
