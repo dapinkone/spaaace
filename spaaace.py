@@ -13,6 +13,13 @@ import sys
 import random
 import time
 import math
+
+if not (sys.version.startswith('3.')):
+    print("Error: Python 3 required. Python 2 is not supported.")
+    quit()
+
+
+
 # pygame.init mysteriously crashes on debian when pygame.quit is called.
 # lets use pygame.display instead, and hope that doesn't cause issues.
 pygame.display.init()
@@ -97,8 +104,6 @@ class Player(S_Picture):
         super().__init__(self.image_filename, location)
     image_filename = './assets/SpaceShip.png'
     bullet_type = 0  # default type....this seems cryptic. #TODO #FIXME
-
-
 
 player_sprite = Player((300, 500))
 
