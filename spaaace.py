@@ -178,17 +178,6 @@ class Enemy(S_Picture):
                 self.rect.y = self.rect.y - 20
         all_sprites_list.add(self)
 
-
-# class Upgrade(S_Picture):
-#     image_filename = './assets/upgrade_cir.png'
-
-#     def __init__(self, x, y):
-#         self.upgrade_type = 0  # TODO: diff types of upgrade
-#         S_Picture.__init__(self, self.image_filename, x, y)
-#         all_sprites_list.add(self)
-#         upgrade_group.add(self)
-
-
 class Text(pygame.sprite.Sprite):
 
     def __init__(self, text, size=16, color=WHITE, width=40, height=40):
@@ -197,10 +186,6 @@ class Text(pygame.sprite.Sprite):
 
         self.font = pygame.font.SysFont("Arial", size)
         self.textSurf = self.font.render(text, 1, color)
-
-
-# TODO: setup reasonable tiling or something for a background.
-#lvl_one_bg = (0, -1782 + screen_height))Bg_Picture('./assets/level one.png')
 
 ##############################
 # function definitions
@@ -254,11 +239,6 @@ def game_over():  # game over screen/menu?
                     sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pass  # TODO add continue button.
-                # print(again_text.get_rect())
-                # print(mouse_y, mouse_x)
-            # else:
-            #    print(event, event.type)
-            #    main()
         fpsClock.tick(15)
 
 
@@ -268,15 +248,7 @@ def reset_game():
     global start_time
     start_time = time.time()
     all_sprites_list.remove(all_sprites_list)
-   # p_bullet_sprites.remove(p_bullet_sprites)
-   # enemy_group.remove(enemy_group)
-   # upgrade_group.remove(upgrade_group)
     main()
-
-
-
-# spawn_enemies(10)
-
 
 def main():
     pygame.mouse.set_visible(False)
@@ -329,24 +301,9 @@ def main():
                         global score
                         score = score + 1
                         test_sound.play()
-                        # upgrade spawn at random chance
-                        #if(random.randrange(30) > 25):
-                            # upgrades are complicated. lets readd later.
-                            # Upgrade(sprite_b.rect.x, sprite_b.rect.y)
-                        #    pass
                     if sprite_a.health <= 0:  # sprite_a death
                         all_sprites_list.remove(sprite_a)
-            # TODO: add sound/animation?
-
-        # collision player v upgrades
-#        for upgrade in upgrade_group:
-#            if(pixel_collision(player_sprite, upgrade)):
-#                upgrade_group.remove(upgrade)
-#                all_sprites_list.remove(upgrade)
-#                # player_sprite.bullet_type + 1
-#                if player_sprite.bullet_type < 2:
-#                    player_sprite.bullet_type = player_sprite.bullet_type + 1
-
+        # TODO: add sound/animation?
         # if enemies have been destroyed, lets spawn some new ones.
         # TODO: further complicate with level formula/speeds/balance
         timer = int(time.time() - start_time)
@@ -355,16 +312,12 @@ def main():
         #if len(all_sprites_list) < timer + 1 / (1 + sum(range(1, timer))):
         if timer % 3600 == 0:
                 spawn_enemies(1)
-        # print("timer: {} {}".format(start_time, timer))
-        # print("Currently {} enemies fielded.".format(len(enemy_group)))
-        # print("all sprites:  {}".format(len(all_sprites_list)))
         # update all the things!
         all_sprites_list.update()
 
         # paint bg, clear the field.
         screen.fill((0,0,0))
         # TODO: need a better background.
-        # pygame.sprite.Group(lvl_one_bg).draw(screen)
         # draw all the things!
         all_sprites_list.draw(screen)
         screen.blit(Text("Score: {}".format(score)).textSurf, (20, 5))
