@@ -60,10 +60,6 @@ pygame.display.set_caption('SPAAACE bubbles!')
 all_sprites_list = pygame.sprite.Group()
 p_bullet_sprites = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
-
-all_sprites_list = pygame.sprite.Group()
-p_bullet_sprites = pygame.sprite.Group()
-enemy_group = pygame.sprite.Group()
 upgrade_group = pygame.sprite.Group()
 
 
@@ -75,7 +71,7 @@ upgrade_group = pygame.sprite.Group()
 
 class S_Picture(pygame.sprite.Sprite):
 
-    def __init__(self, image_filename, location):
+    def __init__(self, image_filename, location, hostile=True):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load(image_filename).convert_alpha()
         # rotation of images causes deformation.
@@ -87,6 +83,7 @@ class S_Picture(pygame.sprite.Sprite):
         self.frames_alive = 0
         self.image_height = self.image.get_height()
         self.image_width = self.image.get_width()
+        self.hostile = hostile
         # enemies, player, bullets, etc. they all need health pools.
         self.health = 1
 
@@ -102,6 +99,7 @@ class Player(S_Picture):
 
     def __init__(self, location):
         super().__init__(self.image_filename, location)
+        self.hostile = False
     image_filename = './assets/SpaceShip.png'
     bullet_type = 0  # default type....this seems cryptic. #TODO #FIXME
 
@@ -141,7 +139,6 @@ class Enemy(S_Picture):
         self.v_x, self.v_y = vector
         self.relocate()  # find a good initial position.
         self.health = 1
-        self.scale = 1
         enemy_group.add(self)
         all_sprites_list.add(self)
 
@@ -157,6 +154,8 @@ class Enemy(S_Picture):
             self.rect.x = 0
         if self.rect.x < 0 - self.image_width:
             self.rect.x = screen_width
+
+
 
     def relocate(self):
         attempts = 0
@@ -184,13 +183,6 @@ class Upgrade(S_Picture):
         upgrade_group.add(self)
 
 
-class Bg_Picture(S_Picture):
-
-    def __init__(self, image_filename):
-        self.image_filename = image_filename
-        S_Picture.__init__(self, self.image_filename, (0, -1782 + screen_height))
-
-
 class Text(pygame.sprite.Sprite):
 
     def __init__(self, text, size=16, color=WHITE, width=40, height=40):
@@ -201,8 +193,8 @@ class Text(pygame.sprite.Sprite):
         self.textSurf = self.font.render(text, 1, color)
 
 
-
-lvl_one_bg = Bg_Picture('./assets/level one.png')
+# TODO: setup reasonable tiling or something for a background.
+#lvl_one_bg = (0, -1782 + screen_height))Bg_Picture('./assets/level one.png')
 
 ##############################
 # function definitions
