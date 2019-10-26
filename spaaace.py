@@ -57,10 +57,6 @@ screen_height = screen.get_height()
 pygame.display.set_caption("SPAAACE bubbles!")
 
 all_sprites_list = pygame.sprite.Group()
-# p_bullet_sprites = pygame.sprite.Group()
-# enemy_group = pygame.sprite.Group()
-# upgrade_group = pygame.sprite.Group()
-
 
 #########################################
 # CLASSES
@@ -68,6 +64,9 @@ all_sprites_list = pygame.sprite.Group()
 
 
 class S_Picture(pygame.sprite.Sprite):
+  #  def behavior(self, t):
+  #      pass
+
     def __init__(self, image_filename, location, hostile=True):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load(image_filename).convert_alpha()
@@ -75,11 +74,12 @@ class S_Picture(pygame.sprite.Sprite):
         # keep origin on file for reference.
         self.origin_img = self.image
         self.rect = self.image.get_rect()
-        self.move(location)
+        self.origin = location
+        self.move(self.origin)
         self.mask = pygame.mask.from_surface(self.image)
         self.frames_alive = 0
-        self.image_height = self.image.get_height()
-        self.image_width = self.image.get_width()
+        self.height = self.image.get_height()
+        self.width = self.image.get_width()
         self.hostile = hostile
         # enemies, player, bullets, etc. they all need health pools.
         self.health = 1
@@ -90,10 +90,12 @@ class S_Picture(pygame.sprite.Sprite):
 
     def update(self):
         self.frames_alive += 1
+        if 'behavior' in dir(self):
+            self.behavior(self.frames_alive) # movement behavior.
 
     def spawn_bullet(self):
         new_bullet = Bullet(
-            location=(self.rect.x + self.image_width / 2, self.rect.y),
+            location=(self.rect.x + self.width / 2, self.rect.y),
             hostile=self.hostile,
         )
         all_sprites_list.add(new_bullet)
@@ -112,6 +114,15 @@ player_sprite = Player((300, 500))
 
 
 class Bullet(S_Picture):
+    def default_behavior(self, t):
+        #print(f"t={t}")
+        x = self.origin[0]
+        if not self.hostile:
+            y = self.origin[1] - 8 * t  # vertical trajectory
+        else:
+            y = self.origin[1] + 8 * t # default for enemy bullets.(?)
+        self.move((x, y))
+
     def __init__(
         self,
         location,
@@ -121,22 +132,17 @@ class Bullet(S_Picture):
     ):
         super().__init__(image_filename, location)
 
-        def default_behavior(self, t):
-            x = self.spawn_location[0]
-            y = self.spawn_location[1] - 8 * t  # vertical trajectory
-            return (x, y)
 
         if behavior is None:
-            behavior = default_behavior
-        self.spawn_location = location
+            self.behavior = self.default_behavior
+        else:
+            self.behavior = behavior
         self.hostile = hostile
         self.image_filename = image_filename
         self.health = 1  #
-        self.behavior = behavior
 
     def update(self):
         super().update()
-        self.move(self.behavior(self, self.frames_alive))
         # destroy sprite if it's out of range.
         if self.rect.y < 0:
             all_sprites_list.remove(self)
@@ -161,7 +167,7 @@ class Enemy(S_Picture):
             self.relocate()
         if self.rect.x > screen_width:
             self.rect.x = 0
-        if self.rect.x < 0 - self.image_width:
+        if self.rect.x < 0 - self.width:
             self.rect.x = screen_width
 
         if self.frames_alive % 10 == 0:  # bullet every 10 frames.
@@ -173,13 +179,13 @@ class Enemy(S_Picture):
         all_sprites_list.remove(self)  # if it already exists = inf collision
         self.rect.x = random.randrange(0, screen_width - 60)
         self.rect.y = 0
-        while pygame.sprite.spritecollide(self, all_sprites_list, False):
-            attempts = attempts + 1
+        #while pygame.sprite.spritecollide(self, all_sprites_list, False):
+        #    attempts = attempts + 1
             # prevent inf loop by repositioning in y
             # FIXME: does this actually prevent inf loop? or just
             # make a train along the y axis?
-            if attempts > 10:
-                self.rect.y = self.rect.y - 20
+        #    if attempts > 10:
+        #        self.rect.y = self.rect.y - 20
         all_sprites_list.add(self)
 
 
@@ -276,8 +282,8 @@ def main():
                 # put center of ship on mouse, not corner of picture.
                 player_sprite.move(
                     (
-                        x - player_sprite.image_width / 2,
-                        y + player_sprite.image_height / 2,
+                        x - player_sprite.width / 2,
+                        y + player_sprite.height / 2,
                     )
                 )
 
