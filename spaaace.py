@@ -13,6 +13,7 @@ import sys
 import random
 import time
 import math
+import traceback
 
 if not (sys.version.startswith("3.")):
     print("Error: Python 3 required. Python 2 is not supported.")
@@ -145,7 +146,7 @@ class Bullet(S_Picture):
     def update(self):
         super().update()
         # destroy sprite if it's out of range.
-        if self.rect.y < 0:
+        if self.rect.y < 0 or self.rect.y > screen_height:
             all_sprites_list.remove(self)
 
 
@@ -237,6 +238,7 @@ def game_over():  # game over screen/menu?
     screen.blit(game_over_text, (game_over_x, screen_height / 3))
     screen.blit(score_text, (score_text_x, screen_height / 2))
     screen.blit(again_text, (again_text_x, screen_height / 1.5))
+
     pygame.display.flip()
     done = False
     while not done:
@@ -247,6 +249,7 @@ def game_over():  # game over screen/menu?
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    print(event.key, " recieved!")
                     reset_game()
                 if event.key is pygame.K_ESCAPE:
                     pygame.quit()
@@ -261,7 +264,9 @@ def reset_game():
     score = 0
     global start_time
     start_time = time.time()
+    player_sprite.health = 1
     all_sprites_list.remove(all_sprites_list)
+    screen.fill((0,0,0))
     main()
 
 
@@ -272,6 +277,7 @@ def main():
     mouse_button_pressed = False
     bullet_delay = 3  # allow a bullet fired every N frames
     bullet_timer = bullet_delay
+    print("Ready.")
     while not done:  # main loop
         for event in pygame.event.get():
             if event.type in (pygame.QUIT, pygame.K_ESCAPE):
@@ -314,13 +320,16 @@ def main():
                     sprite_b.health = sprite_b.health - sprite_a.health
                     sprite_a.health = sprite_a.health - temp
                     # parsing out the consequences.
-                    if sprite_b.health <= 0:  # sprite_b death
-                        all_sprites_list.remove(sprite_b)
-                        global score
-                        score = score + 1
-                        test_sound.play()
-                    if sprite_a.health <= 0:  # sprite_a death
-                        all_sprites_list.remove(sprite_a)
+                    for s in [sprite_a, sprite_b]:
+                        if s.health <= 0:  # sprite_b death
+                            all_sprites_list.remove(s)
+                            global score
+                            score = score + 1
+                            test_sound.play()
+                            # there's gotta be a better way....
+                            if s.__class__ == Enemy:
+                                global enemy_counter
+                                enemy_counter -= 1
         # TODO: add sound/animation?
         # if enemies have been destroyed, lets spawn some new ones.
         # TODO: further complicate with level formula/speeds/balance
@@ -357,5 +366,9 @@ def main():
         # slow it down, if necessary.
         fpsClock.tick(60)  # we don't need more than 60 fps for this. srsly.
 
-
-main()
+try:
+    main()
+except Exception as e:
+    print(e)
+finally:
+    pygame.quit()
