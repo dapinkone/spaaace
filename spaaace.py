@@ -13,12 +13,10 @@ import sys
 import random
 import time
 import math
-import traceback
 
 if not (sys.version.startswith("3.")):
     print("Error: Python 3 required. Python 2 is not supported.")
     quit()
-
 
 # pygame.init mysteriously crashes on debian when pygame.quit is called.
 # lets use pygame.display instead, and hope that doesn't cause issues.
@@ -68,6 +66,8 @@ enemy_counter = 0
 class S_Picture(pygame.sprite.Sprite):
   #  def behavior(self, t):
   #      pass
+    def die(self):
+        pass
 
     def __init__(self, image_filename, location, hostile=True):
         pygame.sprite.Sprite.__init__(self)
@@ -85,6 +85,7 @@ class S_Picture(pygame.sprite.Sprite):
         self.hostile = hostile
         # enemies, player, bullets, etc. they all need health pools.
         self.health = 1
+        self.orientation = 0 # angle offset
 
     def move(self, location):
         self.rect.x = location[0]
@@ -112,7 +113,7 @@ class Player(S_Picture):
     bullet_type = 0  # default type....this seems cryptic. #TODO #FIXME
 
 
-player_sprite = Player((300, 500))
+player_sprite = Player((screen_width/2, screen_height/2))
 
 
 class Bullet(S_Picture):
@@ -191,6 +192,9 @@ class Enemy(S_Picture):
         #        self.rect.y = self.rect.y - 20
         all_sprites_list.add(self)
 
+    def die(self):
+        global enemy_counter
+        enemy_counter -= 1
 
 class Text(pygame.sprite.Sprite):
     def __init__(self, text, size=16, color=WHITE, width=40, height=40):
@@ -251,9 +255,11 @@ def game_over():  # game over screen/menu?
                 if event.key in (pygame.K_RETURN, pygame.K_SPACE):
                     print(event.key, " recieved!")
                     reset_game()
-                if event.key is pygame.K_ESCAPE:
+                elif event.key is pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
+                else:
+                    print(event.key)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pass  # TODO add continue button.
         fpsClock.tick(15)
@@ -264,6 +270,8 @@ def reset_game():
     score = 0
     global start_time
     start_time = time.time()
+    global enemy_counter
+    enemy_counter = 0
     player_sprite.health = 1
     all_sprites_list.remove(all_sprites_list)
     screen.fill((0,0,0))
@@ -282,7 +290,6 @@ def main():
         for event in pygame.event.get():
             if event.type in (pygame.QUIT, pygame.K_ESCAPE):
                 done = True
-
             # TODO: add keyboard controls here.
             # mouse controls
             elif event.type == pygame.MOUSEMOTION:
@@ -327,9 +334,7 @@ def main():
                             score = score + 1
                             test_sound.play()
                             # there's gotta be a better way....
-                            if s.__class__ == Enemy:
-                                global enemy_counter
-                                enemy_counter -= 1
+                            s.die()
         # TODO: add sound/animation?
         # if enemies have been destroyed, lets spawn some new ones.
         # TODO: further complicate with level formula/speeds/balance
